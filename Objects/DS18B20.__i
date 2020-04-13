@@ -1,0 +1,1 @@
+"Code\Sensor\DS18B20\DS18B20.c" OMF2 OPTIMIZE (9,SPEED) BROWSE MODP2 INCDIR(.\Code\Basic\def;.\Code\Basic\delay;.\Code\Basic\init;.\Code\Basic\uart;.\Code\Sensor\DS18B20;.\Code\Sensor\LCD1602;.\Code\AlibabaCloud) DEBUG PRINT(.\Listings\DS18B20.lst) OBJECT(.\Objects\DS18B20.obj)

@@ -1,7 +1,7 @@
 #include "uart.h"
 //------------------------------------------------------------------------------------------------//
 xdata uchar uart4_buffer[uart4_buffer_size];
-pdata ushort uart4_idx1, uart4_idx2;
+data ushort uart4_idx1, uart4_idx2;
 
 bit uart1_busy, uart4_busy;
 //------------------------------------------------------------------------------------------------//

@@ -1,4 +1,4 @@
-C51 COMPILER V9.59.0.0   ISR                                                               04/13/2020 15:43:47 PAGE 1   
+C51 COMPILER V9.59.0.0   ISR                                                               04/13/2020 21:24:43 PAGE 1   
 
 
 C51 COMPILER V9.59.0.0, COMPILATION OF MODULE ISR
@@ -62,7 +62,7 @@ line level    source
               {
               }
               #endif
-C51 COMPILER V9.59.0.0   ISR                                                               04/13/2020 15:43:47 PAGE 2   
+C51 COMPILER V9.59.0.0   ISR                                                               04/13/2020 21:24:43 PAGE 2   
 
   54          #ifdef _ISR9_
               void SPI_ISR(void) interrupt 9
@@ -99,51 +99,60 @@ line level    source
   86          {
   87   1          if (S4CON & S4RI)
   88   1          {
-  89   2              S4CON &= ~S4RI;
-  90   2              LED_GREEN = 1;
-  91   2              if ((uart4_idx2 + 1) % uart4_buffer_size == uart4_idx1) //串口缓冲区已满,放弃当前数据
-  92   2              {                                                       //不能打印日志,可能导致堆栈错误
-  93   3                  LED_GREEN = 0;                                      //亮绿灯表示串口缓冲区已满负荷
-  94   3                  return;
-  95   3              }
-  96   2              uart4_buffer[uart4_idx2] = S4BUF;
-  97   2              if (uart4_idx2 + 1 == uart4_buffer_size)
-  98   2                  uart4_idx2 = 0;
-  99   2              else
- 100   2                  ++uart4_idx2;
- 101   2          }
- 102   1          else
- 103   1              S4CON &= ~S4TI, uart4_busy = false;
- 104   1      }
- 105          #endif
- 106          #ifdef _ISR16_
+  89   2                      bool isFull=false;
+  90   2              S4CON &= ~S4RI;
+  91   2                      if(uart4_idx2 + 1 == uart4_buffer_size)
+  92   2                      {
+  93   3                              if(uart4_idx1 == 0)
+  94   3                                      isFull = true;
+  95   3                      }
+  96   2                      else if(uart4_idx1 == uart4_idx2 + 1)
+  97   2                              isFull = true;
+  98   2                      else
+  99   2                              LED_GREEN = 1;
+ 100   2                      if(isFull == true)//串口缓冲区已满,放弃当前数据
+ 101   2              {                                                       //不能打印日志,可能导致堆栈错误
+ 102   3                  LED_GREEN = 0;                                      //亮绿灯表示串口缓冲区已满
+ 103   3                  return;
+ 104   3              }
+ 105   2              uart4_buffer[uart4_idx2] = S4BUF;
+ 106   2              if (uart4_idx2 + 1 == uart4_buffer_size)
+ 107   2                  uart4_idx2 = 0;
+ 108   2              else
+ 109   2                  ++uart4_idx2;
+ 110   2          }
+ 111   1          else
+ 112   1              S4CON &= ~S4TI, uart4_busy = false;
+ 113   1      }
+ 114          #endif
+ 115          #ifdef _ISR16_
+C51 COMPILER V9.59.0.0   ISR                                                               04/13/2020 21:24:43 PAGE 3   
+
               void TM3_ISR(void) interrupt 19
               {
               }
               #endif
- 111          #ifdef _ISR17_
+ 120          #ifdef _ISR17_
               void TM4_ISR(void) interrupt 20
               {
               }
               #endif
-C51 COMPILER V9.59.0.0   ISR                                                               04/13/2020 15:43:47 PAGE 3   
-
- 116          #ifdef _ISR18_
+ 125          #ifdef _ISR18_
               void CMP_ISR(void) interrupt 21
               {
               }
               #endif
- 121          #ifdef _ISR19_
+ 130          #ifdef _ISR19_
               void PWM_ISR(void) interrupt 22
               {
               }
               #endif
- 126          #ifdef _ISR20_
+ 135          #ifdef _ISR20_
               void PWMFD_ISR(void) interrupt 23
               {
               }
               #endif
- 131          #ifdef _ISR21_
+ 140          #ifdef _ISR21_
               void I2C_ISR(void) interrupt 24
               {
               }
@@ -152,13 +161,13 @@ line level    source
 
 
 MODULE INFORMATION:   STATIC OVERLAYABLE
-   CODE SIZE        =    267    ----
+   CODE SIZE        =    255    ----
    CONSTANT SIZE    =   ----    ----
    XDATA SIZE       =   ----    ----
    PDATA SIZE       =   ----    ----
    DATA SIZE        =   ----    ----
    IDATA SIZE       =   ----    ----
-   BIT SIZE         =   ----    ----
+   BIT SIZE         =   ----       1
    EDATA SIZE       =   ----    ----
    HDATA SIZE       =   ----    ----
    XDATA CONST SIZE =   ----    ----

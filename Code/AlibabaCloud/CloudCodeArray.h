@@ -23,6 +23,7 @@ extern code uchar *ATCmd[];
 #define AT_MQTTCLOSE 12
 #define AT_WJAP 13
 #define AT_REBOOT 14
+#define AT_WJAPQ 15
 //------------------------------------------------------------------------------------------------//
 //Cloud²ÎÊý
 extern code uchar DeviceName[];

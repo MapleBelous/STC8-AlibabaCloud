@@ -39,6 +39,7 @@ code uchar ATCmd11[] = "MQTTSTATUS";
 code uchar ATCmd12[] = "MQTTCLOSE";
 code uchar ATCmd13[] = "WJAP";
 code uchar ATCmd14[] = "REBOOT";
+code uchar ATCmd15[] = "WJAPQ";
 code uchar *ATCmd[] = {ATCmd0, ATCmd1, ATCmd2, ATCmd3, ATCmd4, ATCmd5, ATCmd6, ATCmd7, ATCmd8, ATCmd9,
-                       ATCmd10, ATCmd11, ATCmd12, ATCmd13, ATCmd14};
+                       ATCmd10, ATCmd11, ATCmd12, ATCmd13, ATCmd14,ATCmd15};
 //------------------------------------------------------------------------------------------------//

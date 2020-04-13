@@ -86,11 +86,20 @@ void UART4_ISR(void) interrupt 18
 {
     if (S4CON & S4RI)
     {
+		bool isFull=false;
         S4CON &= ~S4RI;
-        LED_GREEN = 1;
-        if ((uart4_idx2 + 1) % uart4_buffer_size == uart4_idx1) //串口缓冲区已满,放弃当前数据
+		if(uart4_idx2 + 1 == uart4_buffer_size)
+		{
+			if(uart4_idx1 == 0)
+				isFull = true;
+		}
+		else if(uart4_idx1 == uart4_idx2 + 1)
+			isFull = true;
+		else
+			LED_GREEN = 1;
+		if(isFull == true)//串口缓冲区已满,放弃当前数据
         {                                                       //不能打印日志,可能导致堆栈错误
-            LED_GREEN = 0;                                      //亮绿灯表示串口缓冲区已满负荷
+            LED_GREEN = 0;                                      //亮绿灯表示串口缓冲区已满
             return;
         }
         uart4_buffer[uart4_idx2] = S4BUF;

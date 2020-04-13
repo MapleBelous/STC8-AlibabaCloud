@@ -6,6 +6,7 @@ xdata CloudActST CloudAct;
 //各函数缓冲区
 static xdata uchar CloudReceiveBuffer[CloudReceiveBufferSize]; //串口数据处理缓冲区-CloudReceive函数
 static xdata ushort CloudReceiveIdx;                           //串口数据处理缓冲区下标-CloudReceive函数
+static data uchar CloudReceiveState = 0; 					   //接收状态-CloudReceive函数
 static xdata uchar CloudSendBuffer[CloudSendBufferSize];       //生成AT指令缓冲区-CloudSend函数
 static xdata ushort CloudSendIdx;                              //生成AT指令缓冲区下标-CloudSend函数
 static xdata uchar CloudSendData[CloudSendDataSize];           //上报设备属性计算缓冲区-CloudReport函数
@@ -40,13 +41,13 @@ void CloudInit(void) //初始化Cloud
     CloudSendDataIdx = CloudSendIdx = CloudReceiveIdx = 0; //各缓冲区下标清零
 //------------------------------------------------//
 T0:
-    CloudAct.Cmd = AT_REBOOT; //连接路由器
+    CloudAct.Cmd = AT_REBOOT; //重启模组
     CloudSend(2);
     TempT = CloudAct.SysTime; //记录命令发送时间
     while (CloudAct.NeedAns == true)
     {
         CloudReceive();
-        if (CloudAct.SysTime - TempT >= 2000) //2000ms没有完成命令
+        if (CloudAct.SysTime - TempT >= 1500) //1500ms没有完成命令
         {
 			CloudAct.NeedAns=false;
 			goto T0;//重发指令
@@ -56,14 +57,31 @@ T0:
     printf("LOG#:CloudInit-Reboot ok\r\n"); //日志记录模块重启完毕
 #endif
 //------------------------------------------------//
+T0x:
+    CloudAct.Cmd = AT_WJAPQ; //断开当前WiFi连接
+    CloudSend(2);
+    TempT = CloudAct.SysTime; //记录命令发送时间
+    while (CloudAct.NeedAns == true)
+    {
+        CloudReceive();
+        if (CloudAct.SysTime - TempT >= 3000) //3000ms没有完成命令
+        {
+			CloudAct.NeedAns=false;
+			goto T0x;//重发指令
+		}
+    }
+#if LOGRANK_UART1 >= 2
+    printf("LOG#:CloudInit-WiFiDisConect ok\r\n"); //日志记录模块断开当前WiFi连接
+#endif
+//------------------------------------------------//
 T1:
-    CloudAct.Cmd = AT_WJAP; //连接路由器
+    CloudAct.Cmd = AT_WJAP; //连接目标WiFi
     CloudSend(0);
     TempT = CloudAct.SysTime; //记录命令发送时间
     while (CloudAct.NeedAns == true)
     {
         CloudReceive();
-        if (CloudAct.SysTime - TempT >= 2000) //2000ms没有完成命令
+        if (CloudAct.SysTime - TempT >=10000) //10000ms没有完成命令,WiFI信号弱时可能连接很慢
         {
 			CloudAct.NeedAns=false;
 			goto T1;//重发指令
@@ -214,15 +232,14 @@ T9:
 //------------------------------------------------------------------------------------------------//
 static void CloudReceive(void) //接收串口缓冲区数据
 {
-    static uchar State = 0; //接收状态
-    ushort idx1 = uart4_idx1, idx2 = uart4_idx2;
+    data ushort idx1 = uart4_idx1, idx2 = uart4_idx2;
     while (idx1 != idx2)
     {
-        switch (State)
+        switch (CloudReceiveState)
         {
         case 0: //等待中
             if (uart4_buffer[idx1] == 0x0A)
-                ++State; //等待/r
+                CloudReceiveState = 1; //等待/r
             break;
         case 1:                             //读取中
             if (uart4_buffer[idx1] == 0x0D) //发现\n,结束读取,由CloudHandleReceive函数处理
@@ -232,12 +249,13 @@ static void CloudReceive(void) //接收串口缓冲区数据
                     CloudReceiveBuffer[CloudReceiveIdx++] = 0; //放置字符串末尾,方便处理
                     CloudHandleReceive();                      //处理收到的信息
                 }
-                State = 0; //开始新的接收
+                CloudReceiveState = 0; //开始新的接收
                 CloudReceiveIdx = 0;
                 CloudReceiveBuffer[0] = 0;
             }
             else
                 CloudReceiveBuffer[CloudReceiveIdx++] = uart4_buffer[idx1];
+			break;
         }
         if (idx1 + 1 == uart4_buffer_size)
             idx1 = 0;
