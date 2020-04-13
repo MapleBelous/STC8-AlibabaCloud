@@ -1,0 +1,75 @@
+C51 COMPILER V9.59.0.0   CLOUDCODEARRAY                                                    04/13/2020 15:43:48 PAGE 1   
+
+
+C51 COMPILER V9.59.0.0, COMPILATION OF MODULE CLOUDCODEARRAY
+OBJECT MODULE PLACED IN .\Objects\CloudCodeArray.obj
+COMPILER INVOKED BY: C:\Keil_v5\C51\BIN\C51.EXE Code\AlibabaCloud\CloudCodeArray.c OMF2 OPTIMIZE(9,SPEED) BROWSE MODP2 I
+                    -NCDIR(.\Code\Basic\def;.\Code\Basic\delay;.\Code\Basic\init;.\Code\Basic\uart;.\Code\Sensor\DS18B20;.\Code\Sensor\LCD160
+                    -2;.\Code\AlibabaCloud) DEBUG PRINT(.\Listings\CloudCodeArray.lst) OBJECT(.\Objects\CloudCodeArray.obj)
+
+line level    source
+
+   1          #include "CloudCodeArray.h"
+   2          //------------------------------------------------------------------------------------------------//
+   3          //########Cloud参数########//
+   4          code uchar DeviceName[] = "DS18B20";
+   5          code uchar ProductKey[] = "a1ci94s55wO";
+   6          code uchar WiFiSSID[] = "TP-LINK_830A";
+   7          code uchar WiFiPassword[] = "zdwzxy27";
+   8          code uchar MQTTUser[] = "DS18B20&a1ci94s55wO";
+   9          code uchar MQTTPassword[] = "bb1155f896fd6dcc27d5513ccdf3bda60b072aa8";
+  10          code uchar MQTTHost[] = "a1ci94s55wO.iot-as-mqtt.cn-shanghai.aliyuncs.com";
+  11          code uchar MQTTPort[] = "1883";
+  12          code uchar MQTTClientID[] = "123456|securemode=3\\,signmethod=hmacsha1\\,timestamp=789|";
+  13          code uchar MQTTHeartBeat[] = "60";
+  14          code uchar MQTTAutoReConect[] = "ON";
+  15          code uchar MQTTAutoStart[] = "OFF";
+  16          //------------------------------------------------------------------------------------------------//
+  17          //########Publish事件名称########//
+  18          code uchar Event_1[] = "WaterTemperatureLow";  //事件1,PubCode=1
+  19          code uchar Event_2[] = "WaterTemperatureHigh"; //事件2,PubCode=2
+  20          code uchar Event_1_Len = 19;
+  21          code uchar Event_2_Len = 20;
+  22          //########Publish服务名称########//
+  23          code uchar Service_1[] = ""; //事件1,PubCode=200
+  24          code uchar Service_1_Len = 0;
+  25          //------------------------------------------------------------------------------------------------//
+  26          //AT命令集
+  27          code uchar ATCmd0[] = "MQTTAUTH";
+  28          code uchar ATCmd1[] = "MQTTSOCK";
+  29          code uchar ATCmd2[] = "MQTTCID";
+  30          code uchar ATCmd3[] = "MQTTKEEPALIVE";
+  31          code uchar ATCmd4[] = "MQTTRECONN";
+  32          code uchar ATCmd5[] = "MQTTAUTOSTART";
+  33          code uchar ATCmd6[] = "MQTTSTART";
+  34          code uchar ATCmd7[] = "MQTTSUB";
+  35          code uchar ATCmd8[] = "MQTTPUB";
+  36          code uchar ATCmd9[] = "MQTTSEND";
+  37          code uchar ATCmd10[] = "MQTTUNSUB";
+  38          code uchar ATCmd11[] = "MQTTSTATUS";
+  39          code uchar ATCmd12[] = "MQTTCLOSE";
+  40          code uchar ATCmd13[] = "WJAP";
+  41          code uchar ATCmd14[] = "REBOOT";
+  42          code uchar *ATCmd[] = {ATCmd0, ATCmd1, ATCmd2, ATCmd3, ATCmd4, ATCmd5, ATCmd6, ATCmd7, ATCmd8, ATCmd9,
+  43                                 ATCmd10, ATCmd11, ATCmd12, ATCmd13, ATCmd14};
+  44          //------------------------------------------------------------------------------------------------//
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =   ----    ----
+   CONSTANT SIZE    =    457    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+C51 COMPILER V9.59.0.0   CLOUDCODEARRAY                                                    04/13/2020 15:43:48 PAGE 2   
+
+   BIT SIZE         =   ----    ----
+   EDATA SIZE       =   ----    ----
+   HDATA SIZE       =   ----    ----
+   XDATA CONST SIZE =   ----    ----
+   FAR CONST SIZE   =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

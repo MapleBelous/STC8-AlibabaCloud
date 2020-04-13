@@ -1,0 +1,12 @@
+".\Objects\main.obj",
+".\Objects\ISR.obj",
+".\Objects\uart.obj",
+".\Objects\Init.obj",
+".\Objects\delay.obj",
+".\Objects\DS18B20.obj",
+".\Objects\LCD1602.obj",
+".\Objects\CloudHandle.obj",
+".\Objects\CloudCodeArray.obj" 
+TO ".\Objects\STC8_AlibabaCloud" 
+
+PRINT(".\Listings\STC8_AlibabaCloud.map") REMOVEUNUSED 

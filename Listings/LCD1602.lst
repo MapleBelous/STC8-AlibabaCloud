@@ -1,0 +1,136 @@
+C51 COMPILER V9.59.0.0   LCD1602                                                           04/13/2020 15:43:48 PAGE 1   
+
+
+C51 COMPILER V9.59.0.0, COMPILATION OF MODULE LCD1602
+OBJECT MODULE PLACED IN .\Objects\LCD1602.obj
+COMPILER INVOKED BY: C:\Keil_v5\C51\BIN\C51.EXE Code\Sensor\LCD1602\LCD1602.c OMF2 OPTIMIZE(9,SPEED) BROWSE MODP2 INCDIR
+                    -(.\Code\Basic\def;.\Code\Basic\delay;.\Code\Basic\init;.\Code\Basic\uart;.\Code\Sensor\DS18B20;.\Code\Sensor\LCD1602;.\C
+                    -ode\AlibabaCloud) DEBUG PRINT(.\Listings\LCD1602.lst) OBJECT(.\Objects\LCD1602.obj)
+
+line level    source
+
+   1          #include "LCD1602.h"
+   2          //------------------------------------------------------------------------------------------------//
+   3          //自制字模
+   4          code uchar LCD1602Word_Temperature[8]={0x10,0x06,0x09,0x08,0x08,0x09,0x06,0x00};//摄氏度单位,CGRAM=0
+   5          code uchar LCD1602Word_Heart[8]={0x00,0x0A,0x1F,0x1F,0x0E,0x04,0x00,0x00};//爱心,CGRAM=1
+   6          //------------------------------------------------------------------------------------------------//
+   7          static void LCD1602Wait(void); //等待LCD1602空闲
+   8          static void LCD1602LoadWord(uchar Idx,const uchar *Word);//加载字模到CGRAM
+   9          static void LCD1602SetCGRAM(uchar idx); //0x00-0x07,修改CGRAM位置(自制字模RAM位置)
+  10          //------------------------------------------------------------------------------------------------//
+  11          void LCD1602Init(void) //初始化LCD1602
+  12          {
+  13   1              LCD1602_EN = 0;//保持不操作时拉低EN
+  14   1          LCD1602WriteCmdOrData(LCD1602Data8Dis2Mat5x7, 0);
+  15   1          LCD1602WriteCmdOrData(LCD1602NotCur, 0);
+  16   1          LCD1602WriteCmdOrData(LCD1602CurRight, 0);
+  17   1          LCD1602WriteCmdOrData(LCD1602CleanScr, 0);
+  18   1              //加载自制字模
+  19   1              LCD1602LoadWord(0,LCD1602Word_Temperature);
+  20   1              LCD1602LoadWord(1,LCD1602Word_Heart);
+  21   1              LCD1602WriteLine("LCD1602",false);
+  22   1              LCD1602WriteLine("Ready",true);
+  23   1      #if LOGRANK_UART1 >= 2
+  24   1          printf("LOG#:LCD1602Init ok\r\n");
+  25   1      #endif
+  26   1      }
+  27          void LCD1602WriteLine(uchar *Str,bool isLine2)//在1/2行写入字符串
+  28          {
+  29   1              uchar i;
+  30   1              isLine2?LCD1602SetDDRAM(0x40):LCD1602SetDDRAM(0x00);
+  31   1              for(i=0;Str[i]&&i!=40;++i)
+  32   1                      LCD1602WriteCmdOrData(Str[i],1);
+  33   1      }
+  34          uchar LCD1602ReadIdx(void) //读取当前DDRAM位置(光标位置)
+  35          {
+  36   1          uchar Idx;
+  37   1          LCD1602Wait();
+  38   1          LCD1602_RS = 0;
+  39   1          LCD1602_RW = 1;
+  40   1          LCD1602_EN = 1;
+  41   1              LCD1602_DATA=0xFF;
+  42   1              delay_us(40);//等待中
+  43   1              Idx=LCD1602_DATA;
+  44   1          LCD1602_EN = 0;
+  45   1          return Idx;
+  46   1      }
+  47          uchar LCD1602ReadData(void) //读取DDRAM/CGRAM数据
+  48          {
+  49   1          uchar Data;
+  50   1          LCD1602Wait();
+  51   1          LCD1602_RS = 1;
+  52   1          LCD1602_RW = 1;
+  53   1          LCD1602_EN = 1;
+C51 COMPILER V9.59.0.0   LCD1602                                                           04/13/2020 15:43:48 PAGE 2   
+
+  54   1              LCD1602_DATA=0xFF;
+  55   1              delay_us(40);//等待中
+  56   1              Data=LCD1602_DATA;
+  57   1              LCD1602_EN = 0;
+  58   1          return Data;
+  59   1      }
+  60          void LCD1602SetDDRAM(uchar idx) //0x00-0x0F-0x27,0x40-0x4F-0x67,修改DDRAM位置(光标位置)
+  61          {
+  62   1          idx |= 0x80;
+  63   1          LCD1602WriteCmdOrData(idx, 0);
+  64   1      }
+  65          void LCD1602WriteCmdOrData(uchar CmdOrData, bool isData) //写入命令/DDRAM or CGRAM数据
+  66          {
+  67   1          LCD1602Wait();
+  68   1          LCD1602_RS = isData;
+  69   1          LCD1602_RW = 0;
+  70   1          LCD1602_DATA = CmdOrData;
+  71   1          LCD1602_EN = 1;
+  72   1          LCD1602_EN = 0;
+  73   1      }
+  74          //------------------------------------------------------------------------------------------------//
+  75          static void LCD1602LoadWord(uchar Idx,const uchar *Word)//加载字模到CGRAM
+  76          {
+  77   1              uchar i;
+  78   1              delay_ms(1);//延时保证命令正确传递
+  79   1              LCD1602SetCGRAM(Idx);
+  80   1              delay_ms(1);//延时保证LCD1602已经切换为CGRAM接收状态
+  81   1              for(i=0;i!=8;++i)
+  82   1                      LCD1602WriteCmdOrData(Word[i],1);
+  83   1      }
+  84          static void LCD1602SetCGRAM(uchar idx) //0x00-0x07,修改CGRAM位置(自制字模RAM位置)
+  85          {
+  86   1          idx &= 0x07, idx <<= 3, idx |= 0x40;
+  87   1          LCD1602WriteCmdOrData(idx, 0);
+  88   1      }
+  89          static void LCD1602Wait(void) //等待LCD1602空闲
+  90          {
+  91   1          bool isBusy;
+  92   1          LCD1602_RS = 0;
+  93   1          LCD1602_RW = 1;
+  94   1          do
+  95   1          {
+  96   2              LCD1602_EN = 1;
+  97   2                      LCD1602_Busy=1;
+  98   2                      delay_us(40);//等待中
+  99   2                      isBusy=LCD1602_Busy;
+ 100   2                      LCD1602_EN = 0;
+ 101   2          } while (isBusy);
+ 102   1      }
+ 103          //------------------------------------------------------------------------------------------------//
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    298    ----
+   CONSTANT SIZE    =     52    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----      10
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----       3
+   EDATA SIZE       =   ----    ----
+   HDATA SIZE       =   ----    ----
+C51 COMPILER V9.59.0.0   LCD1602                                                           04/13/2020 15:43:48 PAGE 3   
+
+   XDATA CONST SIZE =   ----    ----
+   FAR CONST SIZE   =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)
