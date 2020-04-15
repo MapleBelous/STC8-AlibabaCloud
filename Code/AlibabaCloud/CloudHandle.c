@@ -13,215 +13,243 @@ static xdata uchar CloudSendData[CloudSendDataSize];           //ÉÏ±¨Éè±¸ÊôĞÔ¼ÆË
 static xdata ushort CloudSendDataIdx;                          //¼ÇÂ¼»º³åÇøĞ´Èë´óĞ¡-CloudReportº¯Êı
 //------------------------------------------------------------------------------------------------//
 static void CloudReceive(void);       //½ÓÊÕ´®¿Ú»º³åÇøÊı¾İ
-static bool CloudSend(uchar op);      //·¢ËÍÃüÁîµ½´®¿Ú
-static bool CloudReport(uchar Code);  //Éè±¸ÉÏ±¨
+static bool CloudSend(uchar);      //·¢ËÍÃüÁîµ½´®¿Ú
+static void CloudReSend(uchar);        //ÖØĞÂ·¢ËÍÃüÁî
+static bool CloudReport(uchar);  //Éè±¸ÉÏ±¨
 static void CloudHandleReceive(void); //´¦ÀíCloudReceiveÊÕµ½µÄÒ»ÌõWiFiĞÅÏ¢
 //------------------------------------------------------------------------------------------------//
 void CloudLoop(void) //CloudÖ÷Ñ­»·
 {
-    CloudReceive(); //##½ÓÊÕ²¢´¦Àí´®¿Ú»º³åÇøÊı¾İ
-    //×¢²áÈÎÎñ
-    if (CloudAct.NeedReadDS18B20 == false && CloudAct.SysTime - CloudAct.NeedReadDS18B20_Ms >= DS18B20NeedReadMs && DS18B20ConvertTemperature() == EXIT_SUCCESS) //ĞèÒª¶ÁÈ¡DS18B20ÎÂ¶ÈÖµ,ÇÒÎÂ¶È×ª»»Ö¸Áî³É¹¦
-        CloudAct.NeedReadDS18B20 = true, CloudAct.NeedReadDS18B20_Ms = CloudAct.SysTime;                                                                         //µÈ´ı¶ÁÈ¡ÎÂ¶ÈÖµ
-                                                                                                                                                                 //´ıÖ´ĞĞÈÎÎñ
-    if (CloudAct.NeedReport_WaterTemperatureLow == true && CloudReport(1) == 0)
-        CloudAct.NeedReport_WaterTemperatureLow = false;
-    if (CloudAct.NeedReport_WaterTemperatureHigh == true && CloudReport(2) == 0)
-        CloudAct.NeedReport_WaterTemperatureHigh = false;
-    if (CloudAct.NeedReport == true && CloudReport(0) == 0)
-        CloudAct.NeedReport = false;
-
+    //-----------------------------WiFiÁ¬½ÓÀàÈÎÎñÈÎÎñ-----------------------------//
+	if(CloudAct.DisConectWiFi==false)//WiFiÊÇ·ñÎª¿ÉÓÃ×´Ì¬
+	{
+		CloudReceive(); //##½ÓÊÕ²¢´¦Àí´®¿Ú»º³åÇøÊı¾İ
+		CloudReSend(6); //##µÈ´ı»Ø¸´600ms³¬Ê±,ÖØĞÂ·¢ËÍÃüÁî,´Ó´ËÍùÏÂ¶¼ÓĞ¿ÉÄÜ´¦ÓÚWiFi¶Ï¿ªÁ¬½ÓµÄ×´Ì¬
+		//------DS18B20#»ã±¨¸ßµÍÎÂ±¨¾¯------//
+		if (CloudAct.NeedReport_WaterTemperatureLow == true && CloudReport(1) == 0)
+			CloudAct.NeedReport_WaterTemperatureLow = false;
+		if (CloudAct.NeedReport_WaterTemperatureHigh == true && CloudReport(2) == 0)
+			CloudAct.NeedReport_WaterTemperatureHigh = false;
+		//------DS18B20#»ã±¨µ±Ç°²ÎÊı------//
+		if (CloudAct.NeedReport == true && CloudReport(0) == 0)
+			CloudAct.NeedReport = false;
+	}
+    //-----------------------------´«¸ĞÆ÷ÀàÈÎÎñ-----------------------------//
+	//------DS18B20#¿ªÊ¼×ª»»ÎÂ¶È&¶ÁÈ¡ÎÂ¶ÈÖµ------//
     if (CloudAct.NeedReadDS18B20 == true && CloudAct.SysTime - CloudAct.NeedReadDS18B20_Ms >= DS18B20ConvertTMaxTime[DS18B20ST.ResolutionMode] && DS18B20GetTemperature() == EXIT_SUCCESS) //³É¹¦Ö´ĞĞ¶ÁÈ¡ÎÂ¶ÈÖµ
         CloudAct.NeedReadDS18B20 = false, CloudAct.NeedReadDS18B20_Ms = CloudAct.SysTime;
+    if (CloudAct.NeedReadDS18B20 == false && CloudAct.SysTime - CloudAct.NeedReadDS18B20_Ms >= DS18B20NeedReadMs && DS18B20ConvertTemperature() == EXIT_SUCCESS) //ĞèÒª¶ÁÈ¡DS18B20ÎÂ¶ÈÖµ,ÇÒÎÂ¶È×ª»»Ö¸Áî³É¹¦
+        CloudAct.NeedReadDS18B20 = true, CloudAct.NeedReadDS18B20_Ms = CloudAct.SysTime;
 }
 void CloudInit(void) //³õÊ¼»¯Cloud
 {
-    xdata ulong TempT;
     memset(&CloudAct, 0, sizeof(CloudAct));                //ÇåÁãÈÎÎñÖ¸Ê¾Æ÷
     CloudSendDataIdx = CloudSendIdx = CloudReceiveIdx = 0; //¸÷»º³åÇøÏÂ±êÇåÁã
 //------------------------------------------------//
-T0:
     CloudAct.Cmd = AT_REBOOT; //ÖØÆôÄ£×é
     CloudSend(2);
-    TempT = CloudAct.SysTime; //¼ÇÂ¼ÃüÁî·¢ËÍÊ±¼ä
     while (CloudAct.NeedAns == true)
     {
         CloudReceive();
-        if (CloudAct.SysTime - TempT >= 1500) //1500msÃ»ÓĞÍê³ÉÃüÁî
-        {
-			CloudAct.NeedAns=false;
-			goto T0;//ÖØ·¢Ö¸Áî
+		CloudReSend(20);//2,000msµÈ´ı
+		if(CloudAct.NeedAns_FailCount==1)//CloudReSend·ÅÆú·¢ËÍ
+		{
+			CloudAct.DisConectWiFi=true;//³õÊ¼»¯Ê§°Ü,·ÅÆúÁ¬½ÓWiFiÄ£×é,×ªÎª±¾µØ¹¤×÷Ä£Ê½
+#if LOGRANK_UART1 >= 2
+    printf("LOG#:CloudInit ##[Fail]##\r\n"); //ÈÕÖ¾¼ÇÂ¼Cloud³õÊ¼»¯Ê§°Ü
+#endif
+			return;
 		}
     }
 #if LOGRANK_UART1 >= 2
     printf("LOG#:CloudInit-Reboot ok\r\n"); //ÈÕÖ¾¼ÇÂ¼Ä£¿éÖØÆôÍê±Ï
 #endif
 //------------------------------------------------//
-T0x:
     CloudAct.Cmd = AT_WJAPQ; //¶Ï¿ªµ±Ç°WiFiÁ¬½Ó
     CloudSend(2);
-    TempT = CloudAct.SysTime; //¼ÇÂ¼ÃüÁî·¢ËÍÊ±¼ä
     while (CloudAct.NeedAns == true)
     {
         CloudReceive();
-        if (CloudAct.SysTime - TempT >= 3000) //3000msÃ»ÓĞÍê³ÉÃüÁî
-        {
-			CloudAct.NeedAns=false;
-			goto T0x;//ÖØ·¢Ö¸Áî
+		CloudReSend(100);//10,000msµÈ´ı
+		if(CloudAct.NeedAns_FailCount==1)//CloudReSend·ÅÆú·¢ËÍ
+		{
+			CloudAct.DisConectWiFi=true;//³õÊ¼»¯Ê§°Ü,·ÅÆúÁ¬½ÓWiFiÄ£×é,×ªÎª±¾µØ¹¤×÷Ä£Ê½
+#if LOGRANK_UART1 >= 2
+    printf("LOG#:CloudInit ##[Fail]##\r\n"); //ÈÕÖ¾¼ÇÂ¼Cloud³õÊ¼»¯Ê§°Ü
+#endif
+			return;
 		}
     }
 #if LOGRANK_UART1 >= 2
     printf("LOG#:CloudInit-WiFiDisConect ok\r\n"); //ÈÕÖ¾¼ÇÂ¼Ä£¿é¶Ï¿ªµ±Ç°WiFiÁ¬½Ó
 #endif
 //------------------------------------------------//
-T1:
     CloudAct.Cmd = AT_WJAP; //Á¬½ÓÄ¿±êWiFi
     CloudSend(0);
-    TempT = CloudAct.SysTime; //¼ÇÂ¼ÃüÁî·¢ËÍÊ±¼ä
     while (CloudAct.NeedAns == true)
     {
         CloudReceive();
-        if (CloudAct.SysTime - TempT >=10000) //10000msÃ»ÓĞÍê³ÉÃüÁî,WiFIĞÅºÅÈõÊ±¿ÉÄÜÁ¬½ÓºÜÂı
-        {
-			CloudAct.NeedAns=false;
-			goto T1;//ÖØ·¢Ö¸Áî
-		}	
+		CloudReSend(150);//15,000msµÈ´ı
+		if(CloudAct.NeedAns_FailCount==1)//CloudReSend·ÅÆú·¢ËÍ
+		{
+			CloudAct.DisConectWiFi=true;//³õÊ¼»¯Ê§°Ü,·ÅÆúÁ¬½ÓWiFiÄ£×é,×ªÎª±¾µØ¹¤×÷Ä£Ê½
+#if LOGRANK_UART1 >= 2
+    printf("LOG#:CloudInit ##[Fail]##\r\n"); //ÈÕÖ¾¼ÇÂ¼Cloud³õÊ¼»¯Ê§°Ü
+#endif
+			return;
+		}
     }
 #if LOGRANK_UART1 >= 2
     printf("LOG#:CloudInit-WiFiConect ok\r\n"); //ÈÕÖ¾¼ÇÂ¼Ä¿±êWiFiÒÑÁ¬½Ó
 #endif
 //------------------------------------------------//
-T2:
     CloudAct.Cmd = AT_MQTTAUTH; //ÉèÖÃMQTTÓÃ»§ÃûÃÜÂë
     CloudSend(0);
-    TempT = CloudAct.SysTime; //¼ÇÂ¼ÃüÁî·¢ËÍÊ±¼ä
     while (CloudAct.NeedAns == true)
     {
         CloudReceive();
-        if (CloudAct.SysTime - TempT >= 1500) //1500msÃ»ÓĞÍê³ÉÃüÁî
-        {
-			CloudAct.NeedAns=false;
-			goto T2;//ÖØ·¢Ö¸Áî
-		}	
+		CloudReSend(22);//2,200msµÈ´ı
+		if(CloudAct.NeedAns_FailCount==1)//CloudReSend·ÅÆú·¢ËÍ
+		{
+			CloudAct.DisConectWiFi=true;//³õÊ¼»¯Ê§°Ü,·ÅÆúÁ¬½ÓWiFiÄ£×é,×ªÎª±¾µØ¹¤×÷Ä£Ê½
+#if LOGRANK_UART1 >= 2
+    printf("LOG#:CloudInit ##[Fail]##\r\n"); //ÈÕÖ¾¼ÇÂ¼Cloud³õÊ¼»¯Ê§°Ü
+#endif
+			return;
+		}
     }
 #if LOGRANK_UART1 >= 2
     printf("LOG#:CloudInit-MQTT_UserSet ok\r\n"); //ÈÕÖ¾¼ÇÂ¼MQTTÓÃ»§ÃûºÍÃÜÂëÉèÖÃÍê±Ï
 #endif
 //------------------------------------------------//
-T3:
     CloudAct.Cmd = AT_MQTTSOCK; //ÉèÖÃMQTTÖ÷»úºÍ¶Ë¿Ú
     CloudSend(0);
-    TempT = CloudAct.SysTime; //¼ÇÂ¼ÃüÁî·¢ËÍÊ±¼ä
     while (CloudAct.NeedAns == true)
     {
         CloudReceive();
-        if (CloudAct.SysTime - TempT >= 1500) //1500msÃ»ÓĞÍê³ÉÃüÁî
-        {
-			CloudAct.NeedAns=false;
-			goto T3;//ÖØ·¢Ö¸Áî
+		CloudReSend(22);//2,200msµÈ´ı
+		if(CloudAct.NeedAns_FailCount==1)//CloudReSend·ÅÆú·¢ËÍ
+		{
+			CloudAct.DisConectWiFi=true;//³õÊ¼»¯Ê§°Ü,·ÅÆúÁ¬½ÓWiFiÄ£×é,×ªÎª±¾µØ¹¤×÷Ä£Ê½
+#if LOGRANK_UART1 >= 2
+    printf("LOG#:CloudInit ##[Fail]##\r\n"); //ÈÕÖ¾¼ÇÂ¼Cloud³õÊ¼»¯Ê§°Ü
+#endif
+			return;
 		}
     }
 #if LOGRANK_UART1 >= 2
     printf("LOG#:CloudInit-MQTT_HostSet ok\r\n"); //ÈÕÖ¾¼ÇÂ¼MQTTÖ÷»úºÍ¶Ë¿ÚÉèÖÃÍê±Ï
 #endif
 //------------------------------------------------//
-T4:
     CloudAct.Cmd = AT_MQTTCID; //ÉèÖÃMQTT¿Í»§¶ËID
     CloudSend(0);
-    TempT = CloudAct.SysTime; //¼ÇÂ¼ÃüÁî·¢ËÍÊ±¼ä
     while (CloudAct.NeedAns == true)
     {
         CloudReceive();
-        if (CloudAct.SysTime - TempT >= 1500) //1500msÃ»ÓĞÍê³ÉÃüÁî
-        {
-			CloudAct.NeedAns=false;
-			goto T4;//ÖØ·¢Ö¸Áî
+		CloudReSend(22);//2,200msµÈ´ı
+		if(CloudAct.NeedAns_FailCount==1)//CloudReSend·ÅÆú·¢ËÍ
+		{
+			CloudAct.DisConectWiFi=true;//³õÊ¼»¯Ê§°Ü,·ÅÆúÁ¬½ÓWiFiÄ£×é,×ªÎª±¾µØ¹¤×÷Ä£Ê½
+#if LOGRANK_UART1 >= 2
+    printf("LOG#:CloudInit ##[Fail]##\r\n"); //ÈÕÖ¾¼ÇÂ¼Cloud³õÊ¼»¯Ê§°Ü
+#endif
+			return;
 		}
     }
 #if LOGRANK_UART1 >= 2
     printf("LOG#:CloudInit-MQTT_ClintIDSet ok\r\n"); //ÈÕÖ¾¼ÇÂ¼MQTT¿Í»§¶ËIDÉèÖÃÍê±Ï
 #endif
 //------------------------------------------------//
-T5:
     CloudAct.Cmd = AT_MQTTKEEPALIVE; //ÉèÖÃMQTTĞÄÌøÖÜÆÚ
     CloudSend(0);
-    TempT = CloudAct.SysTime; //¼ÇÂ¼ÃüÁî·¢ËÍÊ±¼ä
     while (CloudAct.NeedAns == true)
     {
         CloudReceive();
-        if (CloudAct.SysTime - TempT >= 1500) //1500msÃ»ÓĞÍê³ÉÃüÁî
-        {
-			CloudAct.NeedAns=false;
-			goto T5;//ÖØ·¢Ö¸Áî
+		CloudReSend(22);//2,200msµÈ´ı
+		if(CloudAct.NeedAns_FailCount==1)//CloudReSend·ÅÆú·¢ËÍ
+		{
+			CloudAct.DisConectWiFi=true;//³õÊ¼»¯Ê§°Ü,·ÅÆúÁ¬½ÓWiFiÄ£×é,×ªÎª±¾µØ¹¤×÷Ä£Ê½
+#if LOGRANK_UART1 >= 2
+    printf("LOG#:CloudInit ##[Fail]##\r\n"); //ÈÕÖ¾¼ÇÂ¼Cloud³õÊ¼»¯Ê§°Ü
+#endif
+			return;
 		}
     }
 #if LOGRANK_UART1 >= 2
     printf("LOG#:CloudInit-MQTT_HeartSet ok\r\n"); //ÈÕÖ¾¼ÇÂ¼MQTTĞÄÌøÊ±¼äÉèÖÃÍê±Ï
 #endif
 //------------------------------------------------//
-T6:
     CloudAct.Cmd = AT_MQTTRECONN; //ÉèÖÃMQTTÊÇ·ñ×Ô¶¯ÖØÁ¬
     CloudSend(0);
-    TempT = CloudAct.SysTime; //¼ÇÂ¼ÃüÁî·¢ËÍÊ±¼ä
     while (CloudAct.NeedAns == true)
     {
         CloudReceive();
-        if (CloudAct.SysTime - TempT >= 1500) //1500msÃ»ÓĞÍê³ÉÃüÁî
-        {
-			CloudAct.NeedAns=false;
-			goto T6;//ÖØ·¢Ö¸Áî
+		CloudReSend(22);//2,200msµÈ´ı
+		if(CloudAct.NeedAns_FailCount==1)//CloudReSend·ÅÆú·¢ËÍ
+		{
+			CloudAct.DisConectWiFi=true;//³õÊ¼»¯Ê§°Ü,·ÅÆúÁ¬½ÓWiFiÄ£×é,×ªÎª±¾µØ¹¤×÷Ä£Ê½
+#if LOGRANK_UART1 >= 2
+    printf("LOG#:CloudInit ##[Fail]##\r\n"); //ÈÕÖ¾¼ÇÂ¼Cloud³õÊ¼»¯Ê§°Ü
+#endif
+			return;
 		}
     }
 #if LOGRANK_UART1 >= 2
     printf("LOG#:CloudInit-MQTT_AutoReConect Set ok\r\n"); //ÈÕÖ¾¼ÇÂ¼MQTT×Ô¶¯ÖØÁ¬ÉèÖÃÍê±Ï
 #endif
 //------------------------------------------------//
-T7:
     CloudAct.Cmd = AT_MQTTAUTOSTART; //ÉèÖÃMQTTÊÇ·ñÉÏµç×Ô¶¯¿ªÆô
     CloudSend(0);
-    TempT = CloudAct.SysTime; //¼ÇÂ¼ÃüÁî·¢ËÍÊ±¼ä
     while (CloudAct.NeedAns == true)
     {
         CloudReceive();
-        if (CloudAct.SysTime - TempT >= 1500) //1500msÃ»ÓĞÍê³ÉÃüÁî
-        {
-			CloudAct.NeedAns=false;
-			goto T7;//ÖØ·¢Ö¸Áî
+		CloudReSend(22);//2,200msµÈ´ı
+		if(CloudAct.NeedAns_FailCount==1)//CloudReSend·ÅÆú·¢ËÍ
+		{
+			CloudAct.DisConectWiFi=true;//³õÊ¼»¯Ê§°Ü,·ÅÆúÁ¬½ÓWiFiÄ£×é,×ªÎª±¾µØ¹¤×÷Ä£Ê½
+#if LOGRANK_UART1 >= 2
+    printf("LOG#:CloudInit ##[Fail]##\r\n"); //ÈÕÖ¾¼ÇÂ¼Cloud³õÊ¼»¯Ê§°Ü
+#endif
+			return;
 		}
     }
 #if LOGRANK_UART1 >= 2
     printf("LOG#:CloudInit-MQTT_AutoStartSet ok\r\n"); //ÈÕÖ¾¼ÇÂ¼MQTTÉÏµç×Ô¶¯¿ªÆôÉèÖÃÍê±Ï
 #endif
 //------------------------------------------------//
-T8:
     CloudAct.Cmd = AT_MQTTSTART; //¿ªÆôMQTT
     CloudSend(2);
-    TempT = CloudAct.SysTime; //¼ÇÂ¼ÃüÁî·¢ËÍÊ±¼ä
     while (CloudAct.NeedAns == true)
     {
         CloudReceive();
-        if (CloudAct.SysTime - TempT >= 1500) //1500msÃ»ÓĞÍê³ÉÃüÁî
-        {
-			CloudAct.NeedAns=false;
-			goto T8;//ÖØ·¢Ö¸Áî
+		CloudReSend(40);//4,000msµÈ´ı
+		if(CloudAct.NeedAns_FailCount==1)//CloudReSend·ÅÆú·¢ËÍ
+		{
+			CloudAct.DisConectWiFi=true;//³õÊ¼»¯Ê§°Ü,·ÅÆúÁ¬½ÓWiFiÄ£×é,×ªÎª±¾µØ¹¤×÷Ä£Ê½
+#if LOGRANK_UART1 >= 2
+    printf("LOG#:CloudInit ##[Fail]##\r\n"); //ÈÕÖ¾¼ÇÂ¼Cloud³õÊ¼»¯Ê§°Ü
+#endif
+			return;
 		}
     }
 #if LOGRANK_UART1 >= 2
     printf("LOG#:CloudInit-MQTT_Start ok\r\n"); //ÈÕÖ¾¼ÇÂ¼MQTT¿ªÆô³É¹¦
 #endif
 //------------------------------------------------//
-T9:
     CloudAct.Cmd = AT_MQTTPUB; //ÉèÖÃMQTT·¢²¼-Ä¬ÈÏÎª²ÎÊı·¢²¼PubCode=0
     CloudAct.PubCode_t = 0;
     CloudSend(0);
-    TempT = CloudAct.SysTime; //¼ÇÂ¼ÃüÁî·¢ËÍÊ±¼ä
     while (CloudAct.NeedAns == true)
     {
         CloudReceive();
-        if (CloudAct.SysTime - TempT >= 1500) //1500msÃ»ÓĞÍê³ÉÃüÁî
-        {
-			CloudAct.NeedAns=false;
-			goto T9;//ÖØ·¢Ö¸Áî
+		CloudReSend(22);//2,200msµÈ´ı
+		if(CloudAct.NeedAns_FailCount==1)//CloudReSend·ÅÆú·¢ËÍ
+		{
+			CloudAct.DisConectWiFi=true;//³õÊ¼»¯Ê§°Ü,·ÅÆúÁ¬½ÓWiFiÄ£×é,×ªÎª±¾µØ¹¤×÷Ä£Ê½
+#if LOGRANK_UART1 >= 2
+    printf("LOG#:CloudInit ##[Fail]##\r\n"); //ÈÕÖ¾¼ÇÂ¼Cloud³õÊ¼»¯Ê§°Ü
+#endif
+			return;
 		}
     }
     //------------------------------------------------//
@@ -232,17 +260,17 @@ T9:
 //------------------------------------------------------------------------------------------------//
 static void CloudReceive(void) //½ÓÊÕ´®¿Ú»º³åÇøÊı¾İ
 {
-    data ushort idx1 = uart4_idx1, idx2 = uart4_idx2;
+    data ushort idx1 = uart2_idx1, idx2 = uart2_idx2;
     while (idx1 != idx2)
     {
         switch (CloudReceiveState)
         {
         case 0: //µÈ´ıÖĞ
-            if (uart4_buffer[idx1] == 0x0A)
+            if (uart2_buffer[idx1] == 0x0A)
                 CloudReceiveState = 1; //µÈ´ı/r
             break;
         case 1:                             //¶ÁÈ¡ÖĞ
-            if (uart4_buffer[idx1] == 0x0D) //·¢ÏÖ\n,½áÊø¶ÁÈ¡,ÓÉCloudHandleReceiveº¯Êı´¦Àí
+            if (uart2_buffer[idx1] == 0x0D) //·¢ÏÖ\n,½áÊø¶ÁÈ¡,ÓÉCloudHandleReceiveº¯Êı´¦Àí
             {
                 if (CloudReceiveIdx >= 2)                      //ÃüÁî¿ÕÏ¶,»Øµ½State=1;
                 {                                              //###´Ë´¦¾ö¶¨¹ıÂË³¤¶È²»×ã2µÄÃüÁî,Ö÷ÒªÕë¶ÔMQTTSENDµÄ>
@@ -254,14 +282,14 @@ static void CloudReceive(void) //½ÓÊÕ´®¿Ú»º³åÇøÊı¾İ
                 CloudReceiveBuffer[0] = 0;
             }
             else
-                CloudReceiveBuffer[CloudReceiveIdx++] = uart4_buffer[idx1];
+                CloudReceiveBuffer[CloudReceiveIdx++] = uart2_buffer[idx1];
 			break;
         }
-        if (idx1 + 1 == uart4_buffer_size)
+        if (idx1 + 1 == uart2_buffer_size)
             idx1 = 0;
         else
             ++idx1;
-        uart4_idx1 = idx1;
+        uart2_idx1 = idx1;
     }
 }
 static bool CloudSend(uchar op) //·¢ËÍÃüÁîµ½´®¿Ú
@@ -349,14 +377,69 @@ static bool CloudSend(uchar op) //·¢ËÍÃüÁîµ½´®¿Ú
 #if LOGRANK_UART1 >= 2
     printf("LOG#:CloudSend$%s\r\n", CloudSendBuffer);
 #endif
-    uart4_sendstr8(CloudSendBuffer, 0);       //·¢ËÍ×¼±¸ºÃµÄÃüÁî×Ö·û´®
+    uart2_sendstr8(CloudSendBuffer);       //·¢ËÍ×¼±¸ºÃµÄÃüÁî×Ö·û´®
     CloudAct.NeedAns = true;                  //¿ªÊ¼µÈ´ıÓ¦´ğ
     CloudAct.NeedAns_Time = CloudAct.SysTime; //¼ÇÂ¼·¢ËÍÃüÁîÊ±¼ä
+	CloudAct.NeedAns_Count = 0;
     return 0;
+}
+static void CloudReSend(uchar Time)
+{
+	xdata ushort Timex=Time*100;
+	if(CloudAct.NeedAns==false)//²»ÊÇµÈ´ıÓ¦´ğ×´Ì¬
+		return;
+	if(CloudAct.SysTime-CloudAct.NeedAns_Time>=Timex)//µÈ´ıÓ¦´ğ³¬¹ı500ms
+	{
+		if(CloudAct.NeedAns_Count==2)//ÒÑ¾­ÖØĞÂ·¢ËÍÁ½´Î
+		{
+#if LOGRANK_UART1 >= 2
+    printf("LOG#:CloudReSend abandon\r\n");
+#endif
+			CloudAct.NeedAns=false;//·ÅÆúÖØĞÂ·¢ËÍ,È¡ÏûµÈ´ıÓ¦´ğ×´Ì¬
+			++CloudAct.NeedAns_FailCount;
+			if(CloudAct.NeedAns_FailCount==3)//Ê§°Ü3´Î,¿ªÊ¼ÑéÖ¤Ä£×éÊÇ·ñÔÚÏß
+			{
+				ushort TempT;
+#if LOGRANK_UART1 >= 2
+    printf("LOG#:CloudReSend check WiFi isOnline?\r\n");
+#endif
+				CloudAct.Cmd = 0xFF;//·ÀÖ¹×èÈûok
+				uart2_sendstr8("\rAT\r");//·¢ËÍATÑéÖ¤
+				TempT = CloudAct.SysTime; //¼ÇÂ¼ÃüÁî·¢ËÍÊ±¼ä
+				CloudAct.NeedAns=true;
+				while (CloudAct.NeedAns == true)
+				{
+					CloudReceive();
+					if (CloudAct.SysTime - TempT >= 3500) //3500msÃ»ÓĞ»Ø¸´
+					{
+#if LOGRANK_UART1 >= 2
+    printf("LOG#:CloudReSend check WiFi isOnline - No,DisConect Now\r\n");
+#endif
+						CloudAct.DisConectWiFi=true;
+						IE2 &= ~ES2;//¹Ø±Õ´®¿Ú2ÖĞ¶Ï
+						return;//Ä£×é¶Ï¿ªÁ¬½Ó,²»ÔÙÁ¬½ÓÄ£×é
+					}
+				}
+#if LOGRANK_UART1 >= 2
+    printf("LOG#:CloudReSend check WiFi isOnline - Yes,Restart MCU\r\n");
+#endif
+				MCURST();//Í¨¹ıÑéÖ¤,ÖØÆôMCUÊÔÍ¼ÖØĞÂÆ¥ÅäÄ£×é×´Ì¬
+			}
+		}
+		else
+		{
+#if LOGRANK_UART1 >= 2
+    printf("LOG#:CloudReSend$%s,Cnt$%bu\r\n", CloudSendBuffer,CloudAct.NeedAns_Count+1);
+#endif
+			uart2_sendstr8(CloudSendBuffer);//ÖØĞÂ·¢ËÍ
+			CloudAct.NeedAns_Time = CloudAct.SysTime;//¸üĞÂ·¢ËÍÊ±¼ä
+			++CloudAct.NeedAns_Count;//¼ÆÊıÖØĞÂ·¢ËÍ´ÎÊı
+		}
+	}
 }
 static bool CloudReport(uchar Code) //Éè±¸ÉÏ±¨
 {
-    if (CloudAct.NeedAns) //ÉĞÓĞĞÅÏ¢Î´Ó¦´ğ
+    if (CloudAct.NeedAns||CloudAct.DisConectWiFi==true) //ÉĞÓĞĞÅÏ¢Î´Ó¦´ğ,»òÄ£×é¶Ï¿ª×´Ì¬
         return 1;
     if (Code == 0)
     {
@@ -377,21 +460,17 @@ static bool CloudReport(uchar Code) //Éè±¸ÉÏ±¨
     {
         if (CloudAct.PubCode != Code) //PubÎ´ÕıÈ·ÇĞ»»
         {
-            xdata ulong TempT;
-        TX:
+			pdata uchar TempFailCount = CloudAct.NeedAns_FailCount;
             CloudAct.Cmd = AT_MQTTPUB;
             CloudAct.PubCode_t = Code;       //±êÖ¾ÒÑ¾­¿ªÊ¼ÇĞ»»
             CloudSend(0);                    //ÇĞ»»µ½Éè±¸ÊôĞÔPub
-            TempT = CloudAct.SysTime;        //¼ÇÂ¼ÃüÁî·¢ËÍÊ±¼ä
-            while (CloudAct.PubCode != Code) //µÈ´ı,Ö±µ½PubÕıÈ·
-            {
-                CloudReceive();
-                if (CloudAct.SysTime - TempT >= 300) //300msÃ»ÓĞÍê³ÉÃüÁî
-				{
-					CloudAct.NeedAns=false;
-					goto TX;//ÖØ·¢Ö¸Áî
-				}
-            }
+            while (CloudAct.NeedAns == true)
+			{
+				CloudReceive();
+				CloudReSend(5);//500msµÈ´ı
+				if(CloudAct.NeedAns_FailCount==TempFailCount+1)//CloudReSend·ÅÆú·¢ËÍ
+					return 1;//Pub×ª»»Ê§°Ü
+			}
         }
         switch (Code)
         {

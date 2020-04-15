@@ -1,4 +1,4 @@
-C51 COMPILER V9.59.0.0   CLOUDHANDLE                                                       04/13/2020 21:29:56 PAGE 1   
+C51 COMPILER V9.59.0.0   CLOUDHANDLE                                                       04/15/2020 14:15:29 PAGE 1   
 
 
 C51 COMPILER V9.59.0.0, COMPILATION OF MODULE CLOUDHANDLE
@@ -24,494 +24,573 @@ line level    source
   13          static xdata ushort CloudSendDataIdx;                          //记录缓冲区写入大小-CloudReport函数
   14          //------------------------------------------------------------------------------------------------//
   15          static void CloudReceive(void);       //接收串口缓冲区数据
-  16          static bool CloudSend(uchar op);      //发送命令到串口
-  17          static bool CloudReport(uchar Code);  //设备上报
-  18          static void CloudHandleReceive(void); //处理CloudReceive收到的一条WiFi信息
-  19          //------------------------------------------------------------------------------------------------//
-  20          void CloudLoop(void) //Cloud主循环
-  21          {
-  22   1          CloudReceive(); //##接收并处理串口缓冲区数据
-  23   1          //注册任务
-  24   1          if (CloudAct.NeedReadDS18B20 == false && CloudAct.SysTime - CloudAct.NeedReadDS18B20_Ms >= DS18B20Need
-             -ReadMs && DS18B20ConvertTemperature() == EXIT_SUCCESS) //需要读取DS18B20温度值,且温度转换指令成功
-  25   1              CloudAct.NeedReadDS18B20 = true, CloudAct.NeedReadDS18B20_Ms = CloudAct.SysTime;                  
-             -                                                       //等待读取温度值
-  26   1                                                                                                                
-             -                                                       //待执行任务
-  27   1          if (CloudAct.NeedReport_WaterTemperatureLow == true && CloudReport(1) == 0)
-  28   1              CloudAct.NeedReport_WaterTemperatureLow = false;
-  29   1          if (CloudAct.NeedReport_WaterTemperatureHigh == true && CloudReport(2) == 0)
-  30   1              CloudAct.NeedReport_WaterTemperatureHigh = false;
-  31   1          if (CloudAct.NeedReport == true && CloudReport(0) == 0)
-  32   1              CloudAct.NeedReport = false;
-  33   1      
-  34   1          if (CloudAct.NeedReadDS18B20 == true && CloudAct.SysTime - CloudAct.NeedReadDS18B20_Ms >= DS18B20Conve
+  16          static bool CloudSend(uchar);      //发送命令到串口
+  17          static void CloudReSend(uchar);        //重新发送命令
+  18          static bool CloudReport(uchar);  //设备上报
+  19          static void CloudHandleReceive(void); //处理CloudReceive收到的一条WiFi信息
+  20          //------------------------------------------------------------------------------------------------//
+  21          void CloudLoop(void) //Cloud主循环
+  22          {
+  23   1          //-----------------------------WiFi连接类任务任务-----------------------------//
+  24   1              if(CloudAct.DisConectWiFi==false)//WiFi是否为可用状态
+  25   1              {
+  26   2                      CloudReceive(); //##接收并处理串口缓冲区数据
+  27   2                      CloudReSend(6); //##等待回复600ms超时,重新发送命令,从此往下都有可能处于WiFi断开连接的状态
+  28   2                      //------DS18B20#汇报高低温报警------//
+  29   2                      if (CloudAct.NeedReport_WaterTemperatureLow == true && CloudReport(1) == 0)
+  30   2                              CloudAct.NeedReport_WaterTemperatureLow = false;
+  31   2                      if (CloudAct.NeedReport_WaterTemperatureHigh == true && CloudReport(2) == 0)
+  32   2                              CloudAct.NeedReport_WaterTemperatureHigh = false;
+  33   2                      //------DS18B20#汇报当前参数------//
+  34   2                      if (CloudAct.NeedReport == true && CloudReport(0) == 0)
+  35   2                              CloudAct.NeedReport = false;
+  36   2              }
+  37   1          //-----------------------------传感器类任务-----------------------------//
+  38   1              //------DS18B20#开始转换温度&读取温度值------//
+  39   1          if (CloudAct.NeedReadDS18B20 == true && CloudAct.SysTime - CloudAct.NeedReadDS18B20_Ms >= DS18B20Conve
              -rtTMaxTime[DS18B20ST.ResolutionMode] && DS18B20GetTemperature() == EXIT_SUCCESS) //成功执行读取温度值
-  35   1              CloudAct.NeedReadDS18B20 = false, CloudAct.NeedReadDS18B20_Ms = CloudAct.SysTime;
-  36   1      }
-  37          void CloudInit(void) //初始化Cloud
-  38          {
-  39   1          xdata ulong TempT;
-  40   1          memset(&CloudAct, 0, sizeof(CloudAct));                //清零任务指示器
-  41   1          CloudSendDataIdx = CloudSendIdx = CloudReceiveIdx = 0; //各缓冲区下标清零
-  42   1      //------------------------------------------------//
-  43   1      T0:
-  44   1          CloudAct.Cmd = AT_REBOOT; //重启模组
-  45   1          CloudSend(2);
-  46   1          TempT = CloudAct.SysTime; //记录命令发送时间
-  47   1          while (CloudAct.NeedAns == true)
-  48   1          {
-  49   2              CloudReceive();
-C51 COMPILER V9.59.0.0   CLOUDHANDLE                                                       04/13/2020 21:29:56 PAGE 2   
+  40   1              CloudAct.NeedReadDS18B20 = false, CloudAct.NeedReadDS18B20_Ms = CloudAct.SysTime;
+  41   1          if (CloudAct.NeedReadDS18B20 == false && CloudAct.SysTime - CloudAct.NeedReadDS18B20_Ms >= DS18B20Need
+             -ReadMs && DS18B20ConvertTemperature() == EXIT_SUCCESS) //需要读取DS18B20温度值,且温度转换指令成功
+  42   1              CloudAct.NeedReadDS18B20 = true, CloudAct.NeedReadDS18B20_Ms = CloudAct.SysTime;
+  43   1      }
+  44          void CloudInit(void) //初始化Cloud
+  45          {
+  46   1          memset(&CloudAct, 0, sizeof(CloudAct));                //清零任务指示器
+  47   1          CloudSendDataIdx = CloudSendIdx = CloudReceiveIdx = 0; //各缓冲区下标清零
+  48   1      //------------------------------------------------//
+  49   1          CloudAct.Cmd = AT_REBOOT; //重启模组
+  50   1          CloudSend(2);
+  51   1          while (CloudAct.NeedAns == true)
+C51 COMPILER V9.59.0.0   CLOUDHANDLE                                                       04/15/2020 14:15:29 PAGE 2   
 
-  50   2              if (CloudAct.SysTime - TempT >= 1500) //1500ms没有完成命令
-  51   2              {
-  52   3                              CloudAct.NeedAns=false;
-  53   3                              goto T0;//重发指令
-  54   3                      }
-  55   2          }
-  56   1      #if LOGRANK_UART1 >= 2
-  57   1          printf("LOG#:CloudInit-Reboot ok\r\n"); //日志记录模块重启完毕
-  58   1      #endif
-  59   1      //------------------------------------------------//
-  60   1      T0x:
-  61   1          CloudAct.Cmd = AT_WJAPQ; //断开当前WiFi连接
-  62   1          CloudSend(2);
-  63   1          TempT = CloudAct.SysTime; //记录命令发送时间
-  64   1          while (CloudAct.NeedAns == true)
-  65   1          {
-  66   2              CloudReceive();
-  67   2              if (CloudAct.SysTime - TempT >= 3000) //3000ms没有完成命令
-  68   2              {
-  69   3                              CloudAct.NeedAns=false;
-  70   3                              goto T0x;//重发指令
-  71   3                      }
-  72   2          }
-  73   1      #if LOGRANK_UART1 >= 2
-  74   1          printf("LOG#:CloudInit-WiFiDisConect ok\r\n"); //日志记录模块断开当前WiFi连接
-  75   1      #endif
-  76   1      //------------------------------------------------//
-  77   1      T1:
-  78   1          CloudAct.Cmd = AT_WJAP; //连接目标WiFi
-  79   1          CloudSend(0);
-  80   1          TempT = CloudAct.SysTime; //记录命令发送时间
-  81   1          while (CloudAct.NeedAns == true)
-  82   1          {
-  83   2              CloudReceive();
-  84   2              if (CloudAct.SysTime - TempT >=10000) //10000ms没有完成命令,WiFI信号弱时可能连接很慢
-  85   2              {
-  86   3                              CloudAct.NeedAns=false;
-  87   3                              goto T1;//重发指令
-  88   3                      }       
-  89   2          }
-  90   1      #if LOGRANK_UART1 >= 2
-  91   1          printf("LOG#:CloudInit-WiFiConect ok\r\n"); //日志记录目标WiFi已连接
-  92   1      #endif
-  93   1      //------------------------------------------------//
-  94   1      T2:
-  95   1          CloudAct.Cmd = AT_MQTTAUTH; //设置MQTT用户名密码
-  96   1          CloudSend(0);
-  97   1          TempT = CloudAct.SysTime; //记录命令发送时间
-  98   1          while (CloudAct.NeedAns == true)
-  99   1          {
- 100   2              CloudReceive();
- 101   2              if (CloudAct.SysTime - TempT >= 1500) //1500ms没有完成命令
- 102   2              {
- 103   3                              CloudAct.NeedAns=false;
- 104   3                              goto T2;//重发指令
- 105   3                      }       
- 106   2          }
- 107   1      #if LOGRANK_UART1 >= 2
- 108   1          printf("LOG#:CloudInit-MQTT_UserSet ok\r\n"); //日志记录MQTT用户名和密码设置完毕
- 109   1      #endif
- 110   1      //------------------------------------------------//
- 111   1      T3:
-C51 COMPILER V9.59.0.0   CLOUDHANDLE                                                       04/13/2020 21:29:56 PAGE 3   
+  52   1          {
+  53   2              CloudReceive();
+  54   2                      CloudReSend(20);//2,000ms等待
+  55   2                      if(CloudAct.NeedAns_FailCount==1)//CloudReSend放弃发送
+  56   2                      {
+  57   3                              CloudAct.DisConectWiFi=true;//初始化失败,放弃连接WiFi模组,转为本地工作模式
+  58   3      #if LOGRANK_UART1 >= 2
+                  printf("LOG#:CloudInit ##[Fail]##\r\n"); //日志记录Cloud初始化失败
+              #endif
+  61   3                              return;
+  62   3                      }
+  63   2          }
+  64   1      #if LOGRANK_UART1 >= 2
+                  printf("LOG#:CloudInit-Reboot ok\r\n"); //日志记录模块重启完毕
+              #endif
+  67   1      //------------------------------------------------//
+  68   1          CloudAct.Cmd = AT_WJAPQ; //断开当前WiFi连接
+  69   1          CloudSend(2);
+  70   1          while (CloudAct.NeedAns == true)
+  71   1          {
+  72   2              CloudReceive();
+  73   2                      CloudReSend(100);//10,000ms等待
+  74   2                      if(CloudAct.NeedAns_FailCount==1)//CloudReSend放弃发送
+  75   2                      {
+  76   3                              CloudAct.DisConectWiFi=true;//初始化失败,放弃连接WiFi模组,转为本地工作模式
+  77   3      #if LOGRANK_UART1 >= 2
+                  printf("LOG#:CloudInit ##[Fail]##\r\n"); //日志记录Cloud初始化失败
+              #endif
+  80   3                              return;
+  81   3                      }
+  82   2          }
+  83   1      #if LOGRANK_UART1 >= 2
+                  printf("LOG#:CloudInit-WiFiDisConect ok\r\n"); //日志记录模块断开当前WiFi连接
+              #endif
+  86   1      //------------------------------------------------//
+  87   1          CloudAct.Cmd = AT_WJAP; //连接目标WiFi
+  88   1          CloudSend(0);
+  89   1          while (CloudAct.NeedAns == true)
+  90   1          {
+  91   2              CloudReceive();
+  92   2                      CloudReSend(150);//15,000ms等待
+  93   2                      if(CloudAct.NeedAns_FailCount==1)//CloudReSend放弃发送
+  94   2                      {
+  95   3                              CloudAct.DisConectWiFi=true;//初始化失败,放弃连接WiFi模组,转为本地工作模式
+  96   3      #if LOGRANK_UART1 >= 2
+                  printf("LOG#:CloudInit ##[Fail]##\r\n"); //日志记录Cloud初始化失败
+              #endif
+  99   3                              return;
+ 100   3                      }
+ 101   2          }
+ 102   1      #if LOGRANK_UART1 >= 2
+                  printf("LOG#:CloudInit-WiFiConect ok\r\n"); //日志记录目标WiFi已连接
+              #endif
+ 105   1      //------------------------------------------------//
+ 106   1          CloudAct.Cmd = AT_MQTTAUTH; //设置MQTT用户名密码
+ 107   1          CloudSend(0);
+ 108   1          while (CloudAct.NeedAns == true)
+ 109   1          {
+ 110   2              CloudReceive();
+ 111   2                      CloudReSend(22);//2,200ms等待
+ 112   2                      if(CloudAct.NeedAns_FailCount==1)//CloudReSend放弃发送
+ 113   2                      {
+C51 COMPILER V9.59.0.0   CLOUDHANDLE                                                       04/15/2020 14:15:29 PAGE 3   
 
- 112   1          CloudAct.Cmd = AT_MQTTSOCK; //设置MQTT主机和端口
- 113   1          CloudSend(0);
- 114   1          TempT = CloudAct.SysTime; //记录命令发送时间
- 115   1          while (CloudAct.NeedAns == true)
- 116   1          {
- 117   2              CloudReceive();
- 118   2              if (CloudAct.SysTime - TempT >= 1500) //1500ms没有完成命令
- 119   2              {
- 120   3                              CloudAct.NeedAns=false;
- 121   3                              goto T3;//重发指令
- 122   3                      }
- 123   2          }
- 124   1      #if LOGRANK_UART1 >= 2
- 125   1          printf("LOG#:CloudInit-MQTT_HostSet ok\r\n"); //日志记录MQTT主机和端口设置完毕
- 126   1      #endif
- 127   1      //------------------------------------------------//
- 128   1      T4:
- 129   1          CloudAct.Cmd = AT_MQTTCID; //设置MQTT客户端ID
- 130   1          CloudSend(0);
- 131   1          TempT = CloudAct.SysTime; //记录命令发送时间
- 132   1          while (CloudAct.NeedAns == true)
- 133   1          {
- 134   2              CloudReceive();
- 135   2              if (CloudAct.SysTime - TempT >= 1500) //1500ms没有完成命令
- 136   2              {
- 137   3                              CloudAct.NeedAns=false;
- 138   3                              goto T4;//重发指令
- 139   3                      }
- 140   2          }
- 141   1      #if LOGRANK_UART1 >= 2
- 142   1          printf("LOG#:CloudInit-MQTT_ClintIDSet ok\r\n"); //日志记录MQTT客户端ID设置完毕
- 143   1      #endif
- 144   1      //------------------------------------------------//
- 145   1      T5:
- 146   1          CloudAct.Cmd = AT_MQTTKEEPALIVE; //设置MQTT心跳周期
- 147   1          CloudSend(0);
- 148   1          TempT = CloudAct.SysTime; //记录命令发送时间
- 149   1          while (CloudAct.NeedAns == true)
- 150   1          {
- 151   2              CloudReceive();
- 152   2              if (CloudAct.SysTime - TempT >= 1500) //1500ms没有完成命令
- 153   2              {
- 154   3                              CloudAct.NeedAns=false;
- 155   3                              goto T5;//重发指令
- 156   3                      }
- 157   2          }
- 158   1      #if LOGRANK_UART1 >= 2
- 159   1          printf("LOG#:CloudInit-MQTT_HeartSet ok\r\n"); //日志记录MQTT心跳时间设置完毕
- 160   1      #endif
- 161   1      //------------------------------------------------//
- 162   1      T6:
- 163   1          CloudAct.Cmd = AT_MQTTRECONN; //设置MQTT是否自动重连
+ 114   3                              CloudAct.DisConectWiFi=true;//初始化失败,放弃连接WiFi模组,转为本地工作模式
+ 115   3      #if LOGRANK_UART1 >= 2
+                  printf("LOG#:CloudInit ##[Fail]##\r\n"); //日志记录Cloud初始化失败
+              #endif
+ 118   3                              return;
+ 119   3                      }
+ 120   2          }
+ 121   1      #if LOGRANK_UART1 >= 2
+                  printf("LOG#:CloudInit-MQTT_UserSet ok\r\n"); //日志记录MQTT用户名和密码设置完毕
+              #endif
+ 124   1      //------------------------------------------------//
+ 125   1          CloudAct.Cmd = AT_MQTTSOCK; //设置MQTT主机和端口
+ 126   1          CloudSend(0);
+ 127   1          while (CloudAct.NeedAns == true)
+ 128   1          {
+ 129   2              CloudReceive();
+ 130   2                      CloudReSend(22);//2,200ms等待
+ 131   2                      if(CloudAct.NeedAns_FailCount==1)//CloudReSend放弃发送
+ 132   2                      {
+ 133   3                              CloudAct.DisConectWiFi=true;//初始化失败,放弃连接WiFi模组,转为本地工作模式
+ 134   3      #if LOGRANK_UART1 >= 2
+                  printf("LOG#:CloudInit ##[Fail]##\r\n"); //日志记录Cloud初始化失败
+              #endif
+ 137   3                              return;
+ 138   3                      }
+ 139   2          }
+ 140   1      #if LOGRANK_UART1 >= 2
+                  printf("LOG#:CloudInit-MQTT_HostSet ok\r\n"); //日志记录MQTT主机和端口设置完毕
+              #endif
+ 143   1      //------------------------------------------------//
+ 144   1          CloudAct.Cmd = AT_MQTTCID; //设置MQTT客户端ID
+ 145   1          CloudSend(0);
+ 146   1          while (CloudAct.NeedAns == true)
+ 147   1          {
+ 148   2              CloudReceive();
+ 149   2                      CloudReSend(22);//2,200ms等待
+ 150   2                      if(CloudAct.NeedAns_FailCount==1)//CloudReSend放弃发送
+ 151   2                      {
+ 152   3                              CloudAct.DisConectWiFi=true;//初始化失败,放弃连接WiFi模组,转为本地工作模式
+ 153   3      #if LOGRANK_UART1 >= 2
+                  printf("LOG#:CloudInit ##[Fail]##\r\n"); //日志记录Cloud初始化失败
+              #endif
+ 156   3                              return;
+ 157   3                      }
+ 158   2          }
+ 159   1      #if LOGRANK_UART1 >= 2
+                  printf("LOG#:CloudInit-MQTT_ClintIDSet ok\r\n"); //日志记录MQTT客户端ID设置完毕
+              #endif
+ 162   1      //------------------------------------------------//
+ 163   1          CloudAct.Cmd = AT_MQTTKEEPALIVE; //设置MQTT心跳周期
  164   1          CloudSend(0);
- 165   1          TempT = CloudAct.SysTime; //记录命令发送时间
- 166   1          while (CloudAct.NeedAns == true)
- 167   1          {
- 168   2              CloudReceive();
- 169   2              if (CloudAct.SysTime - TempT >= 1500) //1500ms没有完成命令
- 170   2              {
- 171   3                              CloudAct.NeedAns=false;
- 172   3                              goto T6;//重发指令
- 173   3                      }
-C51 COMPILER V9.59.0.0   CLOUDHANDLE                                                       04/13/2020 21:29:56 PAGE 4   
+ 165   1          while (CloudAct.NeedAns == true)
+ 166   1          {
+ 167   2              CloudReceive();
+ 168   2                      CloudReSend(22);//2,200ms等待
+ 169   2                      if(CloudAct.NeedAns_FailCount==1)//CloudReSend放弃发送
+ 170   2                      {
+ 171   3                              CloudAct.DisConectWiFi=true;//初始化失败,放弃连接WiFi模组,转为本地工作模式
+ 172   3      #if LOGRANK_UART1 >= 2
+                  printf("LOG#:CloudInit ##[Fail]##\r\n"); //日志记录Cloud初始化失败
+              #endif
+ 175   3                              return;
+C51 COMPILER V9.59.0.0   CLOUDHANDLE                                                       04/15/2020 14:15:29 PAGE 4   
 
- 174   2          }
- 175   1      #if LOGRANK_UART1 >= 2
- 176   1          printf("LOG#:CloudInit-MQTT_AutoReConect Set ok\r\n"); //日志记录MQTT自动重连设置完毕
- 177   1      #endif
- 178   1      //------------------------------------------------//
- 179   1      T7:
- 180   1          CloudAct.Cmd = AT_MQTTAUTOSTART; //设置MQTT是否上电自动开启
- 181   1          CloudSend(0);
- 182   1          TempT = CloudAct.SysTime; //记录命令发送时间
- 183   1          while (CloudAct.NeedAns == true)
- 184   1          {
- 185   2              CloudReceive();
- 186   2              if (CloudAct.SysTime - TempT >= 1500) //1500ms没有完成命令
- 187   2              {
- 188   3                              CloudAct.NeedAns=false;
- 189   3                              goto T7;//重发指令
- 190   3                      }
- 191   2          }
- 192   1      #if LOGRANK_UART1 >= 2
- 193   1          printf("LOG#:CloudInit-MQTT_AutoStartSet ok\r\n"); //日志记录MQTT上电自动开启设置完毕
- 194   1      #endif
- 195   1      //------------------------------------------------//
- 196   1      T8:
- 197   1          CloudAct.Cmd = AT_MQTTSTART; //开启MQTT
- 198   1          CloudSend(2);
- 199   1          TempT = CloudAct.SysTime; //记录命令发送时间
- 200   1          while (CloudAct.NeedAns == true)
- 201   1          {
- 202   2              CloudReceive();
- 203   2              if (CloudAct.SysTime - TempT >= 1500) //1500ms没有完成命令
- 204   2              {
- 205   3                              CloudAct.NeedAns=false;
- 206   3                              goto T8;//重发指令
- 207   3                      }
- 208   2          }
- 209   1      #if LOGRANK_UART1 >= 2
- 210   1          printf("LOG#:CloudInit-MQTT_Start ok\r\n"); //日志记录MQTT开启成功
- 211   1      #endif
- 212   1      //------------------------------------------------//
- 213   1      T9:
- 214   1          CloudAct.Cmd = AT_MQTTPUB; //设置MQTT发布-默认为参数发布PubCode=0
- 215   1          CloudAct.PubCode_t = 0;
- 216   1          CloudSend(0);
- 217   1          TempT = CloudAct.SysTime; //记录命令发送时间
- 218   1          while (CloudAct.NeedAns == true)
- 219   1          {
- 220   2              CloudReceive();
- 221   2              if (CloudAct.SysTime - TempT >= 1500) //1500ms没有完成命令
- 222   2              {
- 223   3                              CloudAct.NeedAns=false;
- 224   3                              goto T9;//重发指令
- 225   3                      }
- 226   2          }
- 227   1          //------------------------------------------------//
- 228   1      #if LOGRANK_UART1 >= 2
- 229   1          printf("LOG#:CloudInit ok\r\n"); //日志记录Cloud初始化完毕
- 230   1      #endif
- 231   1      }
- 232          //------------------------------------------------------------------------------------------------//
- 233          static void CloudReceive(void) //接收串口缓冲区数据
- 234          {
- 235   1          data ushort idx1 = uart4_idx1, idx2 = uart4_idx2;
-C51 COMPILER V9.59.0.0   CLOUDHANDLE                                                       04/13/2020 21:29:56 PAGE 5   
+ 176   3                      }
+ 177   2          }
+ 178   1      #if LOGRANK_UART1 >= 2
+                  printf("LOG#:CloudInit-MQTT_HeartSet ok\r\n"); //日志记录MQTT心跳时间设置完毕
+              #endif
+ 181   1      //------------------------------------------------//
+ 182   1          CloudAct.Cmd = AT_MQTTRECONN; //设置MQTT是否自动重连
+ 183   1          CloudSend(0);
+ 184   1          while (CloudAct.NeedAns == true)
+ 185   1          {
+ 186   2              CloudReceive();
+ 187   2                      CloudReSend(22);//2,200ms等待
+ 188   2                      if(CloudAct.NeedAns_FailCount==1)//CloudReSend放弃发送
+ 189   2                      {
+ 190   3                              CloudAct.DisConectWiFi=true;//初始化失败,放弃连接WiFi模组,转为本地工作模式
+ 191   3      #if LOGRANK_UART1 >= 2
+                  printf("LOG#:CloudInit ##[Fail]##\r\n"); //日志记录Cloud初始化失败
+              #endif
+ 194   3                              return;
+ 195   3                      }
+ 196   2          }
+ 197   1      #if LOGRANK_UART1 >= 2
+                  printf("LOG#:CloudInit-MQTT_AutoReConect Set ok\r\n"); //日志记录MQTT自动重连设置完毕
+              #endif
+ 200   1      //------------------------------------------------//
+ 201   1          CloudAct.Cmd = AT_MQTTAUTOSTART; //设置MQTT是否上电自动开启
+ 202   1          CloudSend(0);
+ 203   1          while (CloudAct.NeedAns == true)
+ 204   1          {
+ 205   2              CloudReceive();
+ 206   2                      CloudReSend(22);//2,200ms等待
+ 207   2                      if(CloudAct.NeedAns_FailCount==1)//CloudReSend放弃发送
+ 208   2                      {
+ 209   3                              CloudAct.DisConectWiFi=true;//初始化失败,放弃连接WiFi模组,转为本地工作模式
+ 210   3      #if LOGRANK_UART1 >= 2
+                  printf("LOG#:CloudInit ##[Fail]##\r\n"); //日志记录Cloud初始化失败
+              #endif
+ 213   3                              return;
+ 214   3                      }
+ 215   2          }
+ 216   1      #if LOGRANK_UART1 >= 2
+                  printf("LOG#:CloudInit-MQTT_AutoStartSet ok\r\n"); //日志记录MQTT上电自动开启设置完毕
+              #endif
+ 219   1      //------------------------------------------------//
+ 220   1          CloudAct.Cmd = AT_MQTTSTART; //开启MQTT
+ 221   1          CloudSend(2);
+ 222   1          while (CloudAct.NeedAns == true)
+ 223   1          {
+ 224   2              CloudReceive();
+ 225   2                      CloudReSend(40);//4,000ms等待
+ 226   2                      if(CloudAct.NeedAns_FailCount==1)//CloudReSend放弃发送
+ 227   2                      {
+ 228   3                              CloudAct.DisConectWiFi=true;//初始化失败,放弃连接WiFi模组,转为本地工作模式
+ 229   3      #if LOGRANK_UART1 >= 2
+                  printf("LOG#:CloudInit ##[Fail]##\r\n"); //日志记录Cloud初始化失败
+              #endif
+ 232   3                              return;
+ 233   3                      }
+ 234   2          }
+ 235   1      #if LOGRANK_UART1 >= 2
+                  printf("LOG#:CloudInit-MQTT_Start ok\r\n"); //日志记录MQTT开启成功
+              #endif
+C51 COMPILER V9.59.0.0   CLOUDHANDLE                                                       04/15/2020 14:15:29 PAGE 5   
 
- 236   1          while (idx1 != idx2)
- 237   1          {
- 238   2              switch (CloudReceiveState)
- 239   2              {
- 240   3              case 0: //等待中
- 241   3                  if (uart4_buffer[idx1] == 0x0A)
- 242   3                      CloudReceiveState = 1; //等待/r
- 243   3                  break;
- 244   3              case 1:                             //读取中
- 245   3                  if (uart4_buffer[idx1] == 0x0D) //发现\n,结束读取,由CloudHandleReceive函数处理
- 246   3                  {
- 247   4                      if (CloudReceiveIdx >= 2)                      //命令空隙,回到State=1;
- 248   4                      {                                              //###此处决定过滤长度不足2的命令,主要针对MQ
+ 238   1      //------------------------------------------------//
+ 239   1          CloudAct.Cmd = AT_MQTTPUB; //设置MQTT发布-默认为参数发布PubCode=0
+ 240   1          CloudAct.PubCode_t = 0;
+ 241   1          CloudSend(0);
+ 242   1          while (CloudAct.NeedAns == true)
+ 243   1          {
+ 244   2              CloudReceive();
+ 245   2                      CloudReSend(22);//2,200ms等待
+ 246   2                      if(CloudAct.NeedAns_FailCount==1)//CloudReSend放弃发送
+ 247   2                      {
+ 248   3                              CloudAct.DisConectWiFi=true;//初始化失败,放弃连接WiFi模组,转为本地工作模式
+ 249   3      #if LOGRANK_UART1 >= 2
+                  printf("LOG#:CloudInit ##[Fail]##\r\n"); //日志记录Cloud初始化失败
+              #endif
+ 252   3                              return;
+ 253   3                      }
+ 254   2          }
+ 255   1          //------------------------------------------------//
+ 256   1      #if LOGRANK_UART1 >= 2
+                  printf("LOG#:CloudInit ok\r\n"); //日志记录Cloud初始化完毕
+              #endif
+ 259   1      }
+ 260          //------------------------------------------------------------------------------------------------//
+ 261          static void CloudReceive(void) //接收串口缓冲区数据
+ 262          {
+ 263   1          data ushort idx1 = uart2_idx1, idx2 = uart2_idx2;
+ 264   1          while (idx1 != idx2)
+ 265   1          {
+ 266   2              switch (CloudReceiveState)
+ 267   2              {
+ 268   3              case 0: //等待中
+ 269   3                  if (uart2_buffer[idx1] == 0x0A)
+ 270   3                      CloudReceiveState = 1; //等待/r
+ 271   3                  break;
+ 272   3              case 1:                             //读取中
+ 273   3                  if (uart2_buffer[idx1] == 0x0D) //发现\n,结束读取,由CloudHandleReceive函数处理
+ 274   3                  {
+ 275   4                      if (CloudReceiveIdx >= 2)                      //命令空隙,回到State=1;
+ 276   4                      {                                              //###此处决定过滤长度不足2的命令,主要针对MQ
              -TTSEND的>
- 249   5                          CloudReceiveBuffer[CloudReceiveIdx++] = 0; //放置字符串末尾,方便处理
- 250   5                          CloudHandleReceive();                      //处理收到的信息
- 251   5                      }
- 252   4                      CloudReceiveState = 0; //开始新的接收
- 253   4                      CloudReceiveIdx = 0;
- 254   4                      CloudReceiveBuffer[0] = 0;
- 255   4                  }
- 256   3                  else
- 257   3                      CloudReceiveBuffer[CloudReceiveIdx++] = uart4_buffer[idx1];
- 258   3                              break;
- 259   3              }
- 260   2              if (idx1 + 1 == uart4_buffer_size)
- 261   2                  idx1 = 0;
- 262   2              else
- 263   2                  ++idx1;
- 264   2              uart4_idx1 = idx1;
- 265   2          }
- 266   1      }
- 267          static bool CloudSend(uchar op) //发送命令到串口
- 268          {
- 269   1          pdata uchar i = 0;
- 270   1          if (CloudAct.NeedAns) //尚有信息未应答
- 271   1              return 1;
- 272   1          CloudSendIdx = sprintf(CloudSendBuffer, "AT+%s", ATCmd[CloudAct.Cmd]);
- 273   1          switch (op)
- 274   1          {
- 275   2          case 0: //设置参数
- 276   2              switch (CloudAct.Cmd)
- 277   2              {
- 278   3              case AT_MQTTAUTH:
- 279   3                  sprintf(CloudSendBuffer + CloudSendIdx, "=%s,%s\r", MQTTUser, MQTTPassword);
- 280   3                  break;
- 281   3              case AT_MQTTSOCK:
- 282   3                  sprintf(CloudSendBuffer + CloudSendIdx, "=%s,%s\r", MQTTHost, MQTTPort);
- 283   3                  break;
- 284   3              case AT_MQTTCID:
- 285   3                  sprintf(CloudSendBuffer + CloudSendIdx, "=%s\r", MQTTClientID);
- 286   3                  break;
- 287   3              case AT_MQTTKEEPALIVE:
- 288   3                  sprintf(CloudSendBuffer + CloudSendIdx, "=%s\r", MQTTHeartBeat);
- 289   3                  break;
- 290   3              case AT_MQTTRECONN:
- 291   3                  sprintf(CloudSendBuffer + CloudSendIdx, "=%s\r", MQTTAutoReConect);
- 292   3                  break;
- 293   3              case AT_MQTTAUTOSTART:
- 294   3                  sprintf(CloudSendBuffer + CloudSendIdx, "=%s\r", MQTTAutoStart);
- 295   3                  break;
- 296   3              case AT_MQTTSUB:
-C51 COMPILER V9.59.0.0   CLOUDHANDLE                                                       04/13/2020 21:29:56 PAGE 6   
+ 277   5                          CloudReceiveBuffer[CloudReceiveIdx++] = 0; //放置字符串末尾,方便处理
+ 278   5                          CloudHandleReceive();                      //处理收到的信息
+ 279   5                      }
+ 280   4                      CloudReceiveState = 0; //开始新的接收
+ 281   4                      CloudReceiveIdx = 0;
+ 282   4                      CloudReceiveBuffer[0] = 0;
+ 283   4                  }
+ 284   3                  else
+ 285   3                      CloudReceiveBuffer[CloudReceiveIdx++] = uart2_buffer[idx1];
+ 286   3                              break;
+ 287   3              }
+ 288   2              if (idx1 + 1 == uart2_buffer_size)
+ 289   2                  idx1 = 0;
+ 290   2              else
+ 291   2                  ++idx1;
+ 292   2              uart2_idx1 = idx1;
+ 293   2          }
+ 294   1      }
+ 295          static bool CloudSend(uchar op) //发送命令到串口
+ 296          {
+ 297   1          pdata uchar i = 0;
+ 298   1          if (CloudAct.NeedAns) //尚有信息未应答
+C51 COMPILER V9.59.0.0   CLOUDHANDLE                                                       04/15/2020 14:15:29 PAGE 6   
 
- 297   3                  break;
- 298   3              case AT_MQTTPUB:
- 299   3                  switch (CloudAct.PubCode_t) //目标Pub
- 300   3                  {
- 301   4                  case 0: //设备属性上报
- 302   4                      sprintf(CloudSendBuffer + CloudSendIdx, "=" PublishSet1 "\r",ProductKey, DeviceName);
- 303   4                      break;
- 304   4                  case 1: //设备事件上报,Event_1:WaterTemperatureLow
- 305   4                      sprintf(CloudSendBuffer + CloudSendIdx, "=" PublishSet2 "\r",ProductKey, DeviceName, Event
-             -_1);
- 306   4                      break;
- 307   4                  case 2: //设备事件上报,Event_2:WaterTemperatureHigh
- 308   4                      sprintf(CloudSendBuffer + CloudSendIdx, "=" PublishSet2 "\r",ProductKey, DeviceName, Event
-             -_2);
- 309   4                      break;
- 310   4                  case 200:
- 311   4                      sprintf(CloudSendBuffer + CloudSendIdx, "=" PublishSet3 "\r",ProductKey, DeviceName, Servi
-             -ce_1);
- 312   4                      break;
- 313   4                  }
+ 299   1              return 1;
+ 300   1          CloudSendIdx = sprintf(CloudSendBuffer, "AT+%s", ATCmd[CloudAct.Cmd]);
+ 301   1          switch (op)
+ 302   1          {
+ 303   2          case 0: //设置参数
+ 304   2              switch (CloudAct.Cmd)
+ 305   2              {
+ 306   3              case AT_MQTTAUTH:
+ 307   3                  sprintf(CloudSendBuffer + CloudSendIdx, "=%s,%s\r", MQTTUser, MQTTPassword);
+ 308   3                  break;
+ 309   3              case AT_MQTTSOCK:
+ 310   3                  sprintf(CloudSendBuffer + CloudSendIdx, "=%s,%s\r", MQTTHost, MQTTPort);
+ 311   3                  break;
+ 312   3              case AT_MQTTCID:
+ 313   3                  sprintf(CloudSendBuffer + CloudSendIdx, "=%s\r", MQTTClientID);
  314   3                  break;
- 315   3              case AT_MQTTSEND:
- 316   3                  switch (CloudAct.PubCode) //当前Pub
- 317   3                  {
- 318   4                  case 0: //设备属性上报
- 319   4                      sprintf(CloudSendBuffer + CloudSendIdx, "=%u\r" SendSet1 "\r",
- 320   4                              SendSet1Len + CloudSendDataIdx, CloudAct.MQTTSENDid, CloudSendData);
- 321   4                      break;
- 322   4                  case 1: //设备事件上报,Event_1:WaterTemperatureLow
- 323   4                      sprintf(CloudSendBuffer + CloudSendIdx, "=%u\r" SendSet2 "\r",
- 324   4                              SendSet2Len + Event_1_Len + CloudSendDataIdx, CloudAct.MQTTSENDid, CloudSendData, 
+ 315   3              case AT_MQTTKEEPALIVE:
+ 316   3                  sprintf(CloudSendBuffer + CloudSendIdx, "=%s\r", MQTTHeartBeat);
+ 317   3                  break;
+ 318   3              case AT_MQTTRECONN:
+ 319   3                  sprintf(CloudSendBuffer + CloudSendIdx, "=%s\r", MQTTAutoReConect);
+ 320   3                  break;
+ 321   3              case AT_MQTTAUTOSTART:
+ 322   3                  sprintf(CloudSendBuffer + CloudSendIdx, "=%s\r", MQTTAutoStart);
+ 323   3                  break;
+ 324   3              case AT_MQTTSUB:
+ 325   3                  break;
+ 326   3              case AT_MQTTPUB:
+ 327   3                  switch (CloudAct.PubCode_t) //目标Pub
+ 328   3                  {
+ 329   4                  case 0: //设备属性上报
+ 330   4                      sprintf(CloudSendBuffer + CloudSendIdx, "=" PublishSet1 "\r",ProductKey, DeviceName);
+ 331   4                      break;
+ 332   4                  case 1: //设备事件上报,Event_1:WaterTemperatureLow
+ 333   4                      sprintf(CloudSendBuffer + CloudSendIdx, "=" PublishSet2 "\r",ProductKey, DeviceName, Event
+             -_1);
+ 334   4                      break;
+ 335   4                  case 2: //设备事件上报,Event_2:WaterTemperatureHigh
+ 336   4                      sprintf(CloudSendBuffer + CloudSendIdx, "=" PublishSet2 "\r",ProductKey, DeviceName, Event
+             -_2);
+ 337   4                      break;
+ 338   4                  case 200:
+ 339   4                      sprintf(CloudSendBuffer + CloudSendIdx, "=" PublishSet3 "\r",ProductKey, DeviceName, Servi
+             -ce_1);
+ 340   4                      break;
+ 341   4                  }
+ 342   3                  break;
+ 343   3              case AT_MQTTSEND:
+ 344   3                  switch (CloudAct.PubCode) //当前Pub
+ 345   3                  {
+ 346   4                  case 0: //设备属性上报
+ 347   4                      sprintf(CloudSendBuffer + CloudSendIdx, "=%u\r" SendSet1 "\r",
+ 348   4                              SendSet1Len + CloudSendDataIdx, CloudAct.MQTTSENDid, CloudSendData);
+ 349   4                      break;
+ 350   4                  case 1: //设备事件上报,Event_1:WaterTemperatureLow
+ 351   4                      sprintf(CloudSendBuffer + CloudSendIdx, "=%u\r" SendSet2 "\r",
+ 352   4                              SendSet2Len + Event_1_Len + CloudSendDataIdx, CloudAct.MQTTSENDid, CloudSendData, 
              -Event_1);
- 325   4                      break;
- 326   4                  case 2: //设备事件上报,Event_2:WaterTemperatureHigh
- 327   4                      sprintf(CloudSendBuffer + CloudSendIdx, "=%u\r" SendSet2 "\r",
- 328   4                              SendSet2Len + Event_2_Len + CloudSendDataIdx, CloudAct.MQTTSENDid, CloudSendData, 
+ 353   4                      break;
+ 354   4                  case 2: //设备事件上报,Event_2:WaterTemperatureHigh
+ 355   4                      sprintf(CloudSendBuffer + CloudSendIdx, "=%u\r" SendSet2 "\r",
+ 356   4                              SendSet2Len + Event_2_Len + CloudSendDataIdx, CloudAct.MQTTSENDid, CloudSendData, 
+C51 COMPILER V9.59.0.0   CLOUDHANDLE                                                       04/15/2020 14:15:29 PAGE 7   
+
              -Event_2);
- 329   4                      break;
- 330   4                  }
- 331   3                  ++CloudAct.MQTTSENDid;
- 332   3                  break; //MQTTSEND
- 333   3              case AT_WJAP:
- 334   3                  sprintf(CloudSendBuffer + CloudSendIdx, "=%s,%s\r", WiFiSSID, WiFiPassword);
- 335   3                  break;
- 336   3              default:
- 337   3                  break;
- 338   3              }
- 339   2              break;
- 340   2          case 3:
- 341   2              CloudSendBuffer[CloudSendIdx++] = '='; //查询用户设置的参数
- 342   2          case 1:
- 343   2              CloudSendBuffer[CloudSendIdx++] = '?'; //查询系统参数
- 344   2          case 2:
- 345   2              CloudSendBuffer[CloudSendIdx++] = '\r'; //执行命令
- 346   2              CloudSendBuffer[CloudSendIdx++] = 0;
- 347   2              break;
- 348   2          }
- 349   1      #if LOGRANK_UART1 >= 2
- 350   1          printf("LOG#:CloudSend$%s\r\n", CloudSendBuffer);
- 351   1      #endif
- 352   1          uart4_sendstr8(CloudSendBuffer, 0);       //发送准备好的命令字符串
- 353   1          CloudAct.NeedAns = true;                  //开始等待应答
-C51 COMPILER V9.59.0.0   CLOUDHANDLE                                                       04/13/2020 21:29:56 PAGE 7   
+ 357   4                      break;
+ 358   4                  }
+ 359   3                  ++CloudAct.MQTTSENDid;
+ 360   3                  break; //MQTTSEND
+ 361   3              case AT_WJAP:
+ 362   3                  sprintf(CloudSendBuffer + CloudSendIdx, "=%s,%s\r", WiFiSSID, WiFiPassword);
+ 363   3                  break;
+ 364   3              default:
+ 365   3                  break;
+ 366   3              }
+ 367   2              break;
+ 368   2          case 3:
+ 369   2              CloudSendBuffer[CloudSendIdx++] = '='; //查询用户设置的参数
+ 370   2          case 1:
+ 371   2              CloudSendBuffer[CloudSendIdx++] = '?'; //查询系统参数
+ 372   2          case 2:
+ 373   2              CloudSendBuffer[CloudSendIdx++] = '\r'; //执行命令
+ 374   2              CloudSendBuffer[CloudSendIdx++] = 0;
+ 375   2              break;
+ 376   2          }
+ 377   1      #if LOGRANK_UART1 >= 2
+                  printf("LOG#:CloudSend$%s\r\n", CloudSendBuffer);
+              #endif
+ 380   1          uart2_sendstr8(CloudSendBuffer);       //发送准备好的命令字符串
+ 381   1          CloudAct.NeedAns = true;                  //开始等待应答
+ 382   1          CloudAct.NeedAns_Time = CloudAct.SysTime; //记录发送命令时间
+ 383   1              CloudAct.NeedAns_Count = 0;
+ 384   1          return 0;
+ 385   1      }
+ 386          static void CloudReSend(uchar Time)
+ 387          {
+ 388   1              xdata ushort Timex=Time*100;
+ 389   1              if(CloudAct.NeedAns==false)//不是等待应答状态
+ 390   1                      return;
+ 391   1              if(CloudAct.SysTime-CloudAct.NeedAns_Time>=Timex)//等待应答超过500ms
+ 392   1              {
+ 393   2                      if(CloudAct.NeedAns_Count==2)//已经重新发送两次
+ 394   2                      {
+ 395   3      #if LOGRANK_UART1 >= 2
+                  printf("LOG#:CloudReSend abandon\r\n");
+              #endif
+ 398   3                              CloudAct.NeedAns=false;//放弃重新发送,取消等待应答状态
+ 399   3                              ++CloudAct.NeedAns_FailCount;
+ 400   3                              if(CloudAct.NeedAns_FailCount==3)//失败3次,开始验证模组是否在线
+ 401   3                              {
+ 402   4                                      ushort TempT;
+ 403   4      #if LOGRANK_UART1 >= 2
+                  printf("LOG#:CloudReSend check WiFi isOnline?\r\n");
+              #endif
+ 406   4                                      CloudAct.Cmd = 0xFF;//防止阻塞ok
+ 407   4                                      uart2_sendstr8("\rAT\r");//发送AT验证
+ 408   4                                      TempT = CloudAct.SysTime; //记录命令发送时间
+ 409   4                                      CloudAct.NeedAns=true;
+ 410   4                                      while (CloudAct.NeedAns == true)
+ 411   4                                      {
+ 412   5                                              CloudReceive();
+ 413   5                                              if (CloudAct.SysTime - TempT >= 3500) //3500ms没有回复
+ 414   5                                              {
+ 415   6      #if LOGRANK_UART1 >= 2
+                  printf("LOG#:CloudReSend check WiFi isOnline - No,DisConect Now\r\n");
+              #endif
+C51 COMPILER V9.59.0.0   CLOUDHANDLE                                                       04/15/2020 14:15:29 PAGE 8   
 
- 354   1          CloudAct.NeedAns_Time = CloudAct.SysTime; //记录发送命令时间
- 355   1          return 0;
- 356   1      }
- 357          static bool CloudReport(uchar Code) //设备上报
- 358          {
- 359   1          if (CloudAct.NeedAns) //尚有信息未应答
- 360   1              return 1;
- 361   1          if (Code == 0)
- 362   1          {
- 363   2              if (CloudAct.PubCode != 0) //Pub未正确切换,切换后返回
- 364   2              {
- 365   3                  if (CloudAct.PubCode_t != 0) //Pub未开始开始切换到Pub=0
- 366   3                  {
- 367   4                      CloudAct.Cmd = AT_MQTTPUB;
- 368   4                      CloudAct.PubCode_t = 0; //标志已经开始切换
- 369   4                      CloudSend(0);           //切换到设备属性Pub
- 370   4                  }
- 371   3                  return 1;
- 372   3              }
- 373   2              CloudSendDataIdx = sprintf(CloudSendData, "\"WaterTemperature\":%.3f",
- 374   2                                         (DS18B20ST.TemperatureData) * DS18B20ReTransfrom[DS18B20ST.ResolutionMo
-             -de] + (float)DS18B20MinT);
- 375   2          }
- 376   1          else
- 377   1          {
- 378   2              if (CloudAct.PubCode != Code) //Pub未正确切换
- 379   2              {
- 380   3                  xdata ulong TempT;
- 381   3              TX:
- 382   3                  CloudAct.Cmd = AT_MQTTPUB;
- 383   3                  CloudAct.PubCode_t = Code;       //标志已经开始切换
- 384   3                  CloudSend(0);                    //切换到设备属性Pub
- 385   3                  TempT = CloudAct.SysTime;        //记录命令发送时间
- 386   3                  while (CloudAct.PubCode != Code) //等待,直到Pub正确
- 387   3                  {
- 388   4                      CloudReceive();
- 389   4                      if (CloudAct.SysTime - TempT >= 300) //300ms没有完成命令
- 390   4                                      {
- 391   5                                              CloudAct.NeedAns=false;
- 392   5                                              goto TX;//重发指令
- 393   5                                      }
- 394   4                  }
- 395   3              }
- 396   2              switch (Code)
- 397   2              {
- 398   3              case 1:
- 399   3                  CloudSendDataIdx = sprintf(CloudSendData, "\"Error\":%bu",DS18B20ST.TemperatureLow);
- 400   3                  break;
- 401   3              case 2:
- 402   3                  CloudSendDataIdx = sprintf(CloudSendData, "\"Error\":%bu",DS18B20ST.TemperatureHigh);
- 403   3                  break;
- 404   3              }
- 405   2          }
- 406   1          CloudAct.Cmd = AT_MQTTSEND; //已写入设备待上报属性,准备发布
- 407   1          CloudSend(0);
- 408   1          return 0;
- 409   1      }
- 410          static void CloudHandleReceive(void)
- 411          {
- 412   1      #if LOGRANK_UART1 >= 3
- 413   1          printf("LOG:HandleReceive$%s\r\n", CloudReceiveBuffer);
- 414   1      #endif
-C51 COMPILER V9.59.0.0   CLOUDHANDLE                                                       04/13/2020 21:29:56 PAGE 8   
-
- 415   1          if (strncmp(CloudReceiveBuffer, "ERROR", 5) == 0) //命令执行异常
- 416   1          {
- 417   2              //目前不处理,待完善
- 418   2          }
- 419   1          else if (strncmp(CloudReceiveBuffer, "OK", 2) == 0) //命令执行正常
- 420   1          {
- 421   2              if (CloudAct.Cmd != AT_MQTTSTART && CloudAct.Cmd != AT_MQTTSEND && CloudAct.Cmd != AT_MQTTSUB && C
-             -loudAct.Cmd != AT_WJAP)
- 422   2              {
- 423   3                  CloudAct.NeedAns = false;
- 424   3                  if (CloudAct.Cmd == AT_MQTTPUB)
- 425   3                      CloudAct.PubCode = CloudAct.PubCode_t; //切换Pub完毕
- 426   3              }
- 427   2          }
- 428   1          else if (CloudReceiveBuffer[0] == '+') //读取详细信息
- 429   1          {
- 430   2              if (strncmp(CloudReceiveBuffer + 1, "MQTTRECV", 8) == 0) //收到订阅信息
- 431   2              {
- 432   3                  switch (CloudReceiveBuffer[10]) //判断订阅的通道
- 433   3                  {
- 434   4                  case '0': //属性设置通道
- 435   4                      break;
- 436   4                  case '1': //设备服务调用
- 437   4                      break;
- 438   4                  case '3': //云端响应属性上报
- 439   4                      break;
- 440   4                  case '4': //云端响应事件上报
- 441   4                      break;
- 442   4                  }
- 443   3              }
- 444   2              else if (strncmp(CloudReceiveBuffer + 1, "MQTTEVENT", 9) == 0)
- 445   2              {
- 446   3                  if (CloudAct.Cmd == AT_MQTTSTART && (strncmp(CloudReceiveBuffer + 11, "CONNECT", 7) == 0))
- 447   3                      if (strncmp(CloudReceiveBuffer + 19, "SUCCESS", 7) == 0)
- 448   3                          CloudAct.NeedAns = false; //成功连接
- 449   3                  if (CloudAct.Cmd == AT_MQTTSUB && (strncmp(CloudReceiveBuffer + 11, "SUBSCRIBE", 9) == 0))
- 450   3                      if (strncmp(CloudReceiveBuffer + 21, "SUCCESS", 7) == 0)
- 451   3                          CloudAct.NeedAns = false; //成功设置订阅
- 452   3                  if (CloudAct.Cmd == AT_MQTTSEND && (strncmp(CloudReceiveBuffer + 11, "PUBLISH", 7) == 0))
- 453   3                      if (strncmp(CloudReceiveBuffer + 19, "SUCCESS", 7) == 0)
- 454   3                          CloudAct.NeedAns = false; //成功发布
+ 418   6                                                      CloudAct.DisConectWiFi=true;
+ 419   6                                                      IE2 &= ~ES2;//关闭串口2中断
+ 420   6                                                      return;//模组断开连接,不再连接模组
+ 421   6                                              }
+ 422   5                                      }
+ 423   4      #if LOGRANK_UART1 >= 2
+                  printf("LOG#:CloudReSend check WiFi isOnline - Yes,Restart MCU\r\n");
+              #endif
+ 426   4                                      MCURST();//通过验证,重启MCU试图重新匹配模组状态
+ 427   4                              }
+ 428   3                      }
+ 429   2                      else
+ 430   2                      {
+ 431   3      #if LOGRANK_UART1 >= 2
+                  printf("LOG#:CloudReSend$%s,Cnt$%bu\r\n", CloudSendBuffer,CloudAct.NeedAns_Count+1);
+              #endif
+ 434   3                              uart2_sendstr8(CloudSendBuffer);//重新发送
+ 435   3                              CloudAct.NeedAns_Time = CloudAct.SysTime;//更新发送时间
+ 436   3                              ++CloudAct.NeedAns_Count;//计数重新发送次数
+ 437   3                      }
+ 438   2              }
+ 439   1      }
+ 440          static bool CloudReport(uchar Code) //设备上报
+ 441          {
+ 442   1          if (CloudAct.NeedAns||CloudAct.DisConectWiFi==true) //尚有信息未应答,或模组断开状态
+ 443   1              return 1;
+ 444   1          if (Code == 0)
+ 445   1          {
+ 446   2              if (CloudAct.PubCode != 0) //Pub未正确切换,切换后返回
+ 447   2              {
+ 448   3                  if (CloudAct.PubCode_t != 0) //Pub未开始开始切换到Pub=0
+ 449   3                  {
+ 450   4                      CloudAct.Cmd = AT_MQTTPUB;
+ 451   4                      CloudAct.PubCode_t = 0; //标志已经开始切换
+ 452   4                      CloudSend(0);           //切换到设备属性Pub
+ 453   4                  }
+ 454   3                  return 1;
  455   3              }
- 456   2              else if (strncmp(CloudReceiveBuffer + 1, "WEVENT", 6) == 0)
- 457   2              {
- 458   3                  if (CloudAct.Cmd == AT_WJAP && (strncmp(CloudReceiveBuffer + 8, "STATION_UP", 10) == 0))
- 459   3                      CloudAct.NeedAns = false; //成功连接
- 460   3              }
- 461   2          }
- 462   1          else //读取附加信息
- 463   1          {
- 464   2              //目前用不到
- 465   2          }
- 466   1      }
- 467          //------------------------------------------------------------------------------------------------//
+ 456   2              CloudSendDataIdx = sprintf(CloudSendData, "\"WaterTemperature\":%.3f",
+ 457   2                                         (DS18B20ST.TemperatureData) * DS18B20ReTransfrom[DS18B20ST.ResolutionMo
+             -de] + (float)DS18B20MinT);
+ 458   2          }
+ 459   1          else
+ 460   1          {
+ 461   2              if (CloudAct.PubCode != Code) //Pub未正确切换
+ 462   2              {
+ 463   3                              pdata uchar TempFailCount = CloudAct.NeedAns_FailCount;
+ 464   3                  CloudAct.Cmd = AT_MQTTPUB;
+ 465   3                  CloudAct.PubCode_t = Code;       //标志已经开始切换
+ 466   3                  CloudSend(0);                    //切换到设备属性Pub
+ 467   3                  while (CloudAct.NeedAns == true)
+ 468   3                              {
+ 469   4                                      CloudReceive();
+ 470   4                                      CloudReSend(5);//500ms等待
+ 471   4                                      if(CloudAct.NeedAns_FailCount==TempFailCount+1)//CloudReSend放弃发送
+ 472   4                                              return 1;//Pub转换失败
+ 473   4                              }
+ 474   3              }
+ 475   2              switch (Code)
+ 476   2              {
+ 477   3              case 1:
+ 478   3                  CloudSendDataIdx = sprintf(CloudSendData, "\"Error\":%bu",DS18B20ST.TemperatureLow);
+C51 COMPILER V9.59.0.0   CLOUDHANDLE                                                       04/15/2020 14:15:29 PAGE 9   
+
+ 479   3                  break;
+ 480   3              case 2:
+ 481   3                  CloudSendDataIdx = sprintf(CloudSendData, "\"Error\":%bu",DS18B20ST.TemperatureHigh);
+ 482   3                  break;
+ 483   3              }
+ 484   2          }
+ 485   1          CloudAct.Cmd = AT_MQTTSEND; //已写入设备待上报属性,准备发布
+ 486   1          CloudSend(0);
+ 487   1          return 0;
+ 488   1      }
+ 489          static void CloudHandleReceive(void)
+ 490          {
+ 491   1      #if LOGRANK_UART1 >= 3
+                  printf("LOG:HandleReceive$%s\r\n", CloudReceiveBuffer);
+              #endif
+ 494   1          if (strncmp(CloudReceiveBuffer, "ERROR", 5) == 0) //命令执行异常
+ 495   1          {
+ 496   2              //目前不处理,待完善
+ 497   2          }
+ 498   1          else if (strncmp(CloudReceiveBuffer, "OK", 2) == 0) //命令执行正常
+ 499   1          {
+ 500   2              if (CloudAct.Cmd != AT_MQTTSTART && CloudAct.Cmd != AT_MQTTSEND && CloudAct.Cmd != AT_MQTTSUB && C
+             -loudAct.Cmd != AT_WJAP)
+ 501   2              {
+ 502   3                  CloudAct.NeedAns = false;
+ 503   3                  if (CloudAct.Cmd == AT_MQTTPUB)
+ 504   3                      CloudAct.PubCode = CloudAct.PubCode_t; //切换Pub完毕
+ 505   3              }
+ 506   2          }
+ 507   1          else if (CloudReceiveBuffer[0] == '+') //读取详细信息
+ 508   1          {
+ 509   2              if (strncmp(CloudReceiveBuffer + 1, "MQTTRECV", 8) == 0) //收到订阅信息
+ 510   2              {
+ 511   3                  switch (CloudReceiveBuffer[10]) //判断订阅的通道
+ 512   3                  {
+ 513   4                  case '0': //属性设置通道
+ 514   4                      break;
+ 515   4                  case '1': //设备服务调用
+ 516   4                      break;
+ 517   4                  case '3': //云端响应属性上报
+ 518   4                      break;
+ 519   4                  case '4': //云端响应事件上报
+ 520   4                      break;
+ 521   4                  }
+ 522   3              }
+ 523   2              else if (strncmp(CloudReceiveBuffer + 1, "MQTTEVENT", 9) == 0)
+ 524   2              {
+ 525   3                  if (CloudAct.Cmd == AT_MQTTSTART && (strncmp(CloudReceiveBuffer + 11, "CONNECT", 7) == 0))
+ 526   3                      if (strncmp(CloudReceiveBuffer + 19, "SUCCESS", 7) == 0)
+ 527   3                          CloudAct.NeedAns = false; //成功连接
+ 528   3                  if (CloudAct.Cmd == AT_MQTTSUB && (strncmp(CloudReceiveBuffer + 11, "SUBSCRIBE", 9) == 0))
+ 529   3                      if (strncmp(CloudReceiveBuffer + 21, "SUCCESS", 7) == 0)
+ 530   3                          CloudAct.NeedAns = false; //成功设置订阅
+ 531   3                  if (CloudAct.Cmd == AT_MQTTSEND && (strncmp(CloudReceiveBuffer + 11, "PUBLISH", 7) == 0))
+ 532   3                      if (strncmp(CloudReceiveBuffer + 19, "SUCCESS", 7) == 0)
+ 533   3                          CloudAct.NeedAns = false; //成功发布
+ 534   3              }
+ 535   2              else if (strncmp(CloudReceiveBuffer + 1, "WEVENT", 6) == 0)
+ 536   2              {
+ 537   3                  if (CloudAct.Cmd == AT_WJAP && (strncmp(CloudReceiveBuffer + 8, "STATION_UP", 10) == 0))
+ 538   3                      CloudAct.NeedAns = false; //成功连接
+ 539   3              }
+C51 COMPILER V9.59.0.0   CLOUDHANDLE                                                       04/15/2020 14:15:29 PAGE 10  
+
+ 540   2          }
+ 541   1          else //读取附加信息
+ 542   1          {
+ 543   2              //目前用不到
+ 544   2          }
+ 545   1      }
+ 546          //------------------------------------------------------------------------------------------------//
 
 
 MODULE INFORMATION:   STATIC OVERLAYABLE
-   CODE SIZE        =   2444    ----
-   CONSTANT SIZE    =    819    ----
-   XDATA SIZE       =   1124       8
-   PDATA SIZE       =   ----       1
-   DATA SIZE        =      1       6
-C51 COMPILER V9.59.0.0   CLOUDHANDLE                                                       04/13/2020 21:29:56 PAGE 9   
-
+   CODE SIZE        =   2496    ----
+   CONSTANT SIZE    =    422    ----
+   XDATA SIZE       =   1125       2
+   PDATA SIZE       =   ----       2
+   DATA SIZE        =      1       8
    IDATA SIZE       =   ----    ----
    BIT SIZE         =   ----    ----
    EDATA SIZE       =   ----    ----

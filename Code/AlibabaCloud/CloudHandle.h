@@ -18,6 +18,8 @@ typedef struct
     uchar NeedAns : 1;       //等待WiFi应答中
     ulong NeedAns_Time;      //发送命令的时间
     uchar NeedAns_Count : 2; //重新发送的次数
+	uchar NeedAns_FailCount:2;//重新发送连续失败放弃重新发送的次数
+	uchar DisConectWiFi:1;//与WiFi模组断开连接
 
     uchar NeedReport : 1;                      //需要上报设备信息
     uchar NeedReport_WaterTemperatureLow : 1;  //需要警报WaterTemperatureLow

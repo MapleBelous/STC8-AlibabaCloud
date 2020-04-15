@@ -49,6 +49,32 @@ void PCA_ISR(void) interrupt 7
 #ifdef _ISR8_
 void UART2_ISR(void) interrupt 8
 {
+	if (S2CON & S2RI != 0)
+    {
+		bool isFull=false;
+        S2CON &= ~S2RI;
+		if(uart2_idx2 + 1 == uart2_buffer_size)
+		{
+			if(uart2_idx1 == 0)
+				isFull = true;
+		}
+		else if(uart2_idx1 == uart2_idx2 + 1)
+			isFull = true;
+		else
+			LED_GREEN = 1;
+		if(isFull == true)//串口缓冲区已满,放弃当前数据
+        {                                                       //不能打印日志,可能导致堆栈错误
+            LED_GREEN = 0;                                      //亮绿灯表示串口缓冲区已满
+            return;
+        }
+        uart2_buffer[uart2_idx2] = S2BUF;
+        if (uart2_idx2 + 1 == uart2_buffer_size)
+            uart2_idx2 = 0;
+        else
+            ++uart2_idx2;
+    }
+    else
+        S2CON &= ~S4TI, uart2_busy = false;
 }
 #endif
 #ifdef _ISR9_
@@ -84,32 +110,6 @@ void UART3_ISR(void) interrupt 17
 #ifdef _ISR15_
 void UART4_ISR(void) interrupt 18
 {
-    if (S4CON & S4RI)
-    {
-		bool isFull=false;
-        S4CON &= ~S4RI;
-		if(uart4_idx2 + 1 == uart4_buffer_size)
-		{
-			if(uart4_idx1 == 0)
-				isFull = true;
-		}
-		else if(uart4_idx1 == uart4_idx2 + 1)
-			isFull = true;
-		else
-			LED_GREEN = 1;
-		if(isFull == true)//串口缓冲区已满,放弃当前数据
-        {                                                       //不能打印日志,可能导致堆栈错误
-            LED_GREEN = 0;                                      //亮绿灯表示串口缓冲区已满
-            return;
-        }
-        uart4_buffer[uart4_idx2] = S4BUF;
-        if (uart4_idx2 + 1 == uart4_buffer_size)
-            uart4_idx2 = 0;
-        else
-            ++uart4_idx2;
-    }
-    else
-        S4CON &= ~S4TI, uart4_busy = false;
 }
 #endif
 #ifdef _ISR16_

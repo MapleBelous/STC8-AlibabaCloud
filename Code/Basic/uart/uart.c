@@ -1,9 +1,9 @@
 #include "uart.h"
 //------------------------------------------------------------------------------------------------//
-xdata uchar uart4_buffer[uart4_buffer_size];
-data ushort uart4_idx1, uart4_idx2;
+xdata uchar uart2_buffer[uart2_buffer_size];
+data ushort uart2_idx1, uart2_idx2;
 
-bit uart1_busy, uart4_busy;
+bit uart1_busy, uart2_busy;
 //------------------------------------------------------------------------------------------------//
 #if LOGRANK_UART1 >= 1
 //-----------ÖØÐ´putcharº¯Êý-----------//
@@ -24,22 +24,18 @@ void uart1_send8(uchar dat)
 }
 #endif
 
-void uart4_send8(uchar dat)
+void uart2_send8(uchar dat)
 {
-    while (uart4_busy)
+    while (uart2_busy)
         continue;
-    uart4_busy = true;
-    S4BUF = dat;
-    while (uart4_busy)
+    uart2_busy = true;
+    S2BUF = dat;
+    while (uart2_busy)
         continue;
 }
-void uart4_sendstr8(uchar *p,uchar n)
+void uart2_sendstr8(uchar *p)
 {
-	if(n)
-		while(n--)
-			uart4_send8(*p++);
-	else
-		while(*p)
-			uart4_send8(*p++);
+	while(*p)
+		uart2_send8(*p++);
 }
 //------------------------------------------------------------------------------------------------//

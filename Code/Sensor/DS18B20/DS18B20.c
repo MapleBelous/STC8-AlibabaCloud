@@ -50,8 +50,8 @@ void DS18B20STInit(void) //初始化DS18B20内存&读取当前DS18B20分辨率
     printf("LOG#:DS18B20Init ok\r\n");
 #endif
 #if LOGRANK_UART1 >= 3
-    printf("LOG:TH-%bu,TL-%bu,Mode-%bu,H1-%u,H2-%u,L1-%u,L2-%u\r\n",
-           TH, TL, DS18B20ST.ResolutionMode,
+    printf("LOG:T-%u,TH-%bu,TL-%bu,Mode-%bu,H1-%u,H2-%u,L1-%u,L2-%u\r\n",
+           DS18B20ST.TemperatureData,TH, TL, DS18B20ST.ResolutionMode,
            DS18B20ST.TemperatureHighData1, DS18B20ST.TemperatureHighData2,
            DS18B20ST.TemperatureLowData1, DS18B20ST.TemperatureLowData2);
 #endif
