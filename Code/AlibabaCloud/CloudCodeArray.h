@@ -40,10 +40,10 @@ extern code uchar MQTTAutoReConect[];
 extern code uchar MQTTAutoStart[];
 //------------------------------------------------------------------------------------------------//
 //Subscribe参数
-#define SubscribeSet1 "/sys/%s/%s/thing/event/property/post_reply,0" //设置为云端响应属性上报,SubCode=0
-#define SubscribeSet2 "/sys/%s/%s/thing/service/property/set,0"      //设置为云端设置设备属性,SubCode=1
-#define SubscribeSet3 "/sys/%s/%s/thing/event/%s/post_reply,0"       //设置为云端响应事件上报,SubCode=0
-#define SubscribeSet4 "/sys/%s/%s/thing/service/%s,0"                //设置为云端调用设备服务,SubCode=2~5
+#define SubscribeSet1 "%bu,/sys/%s/%s/thing/event/property/post_reply,0" //设置为云端响应属性上报,SubCode=0
+#define SubscribeSet2 "%bu,/sys/%s/%s/thing/service/property/set,0"      //设置为云端设置设备属性,SubCode=1
+#define SubscribeSet3 "%bu,/sys/%s/%s/thing/event/%s/post_reply,0"       //设置为云端响应事件上报,SubCode=0
+#define SubscribeSet4 "%bu,/sys/%s/%s/thing/service/%s,0"                //设置为云端调用设备服务,SubCode=2~5
 //------------------------------------------------------------------------------------------------//
 //Publish参数
 #define PublishSet1 "/sys/%s/%s/thing/event/property/post,0" //设置为设备属性上报,PubCode=0
@@ -59,9 +59,14 @@ extern code uchar Service_1[]; //服务1,PubCode=200,SubCode=2
 extern code uchar Service_1_Len;
 //------------------------------------------------------------------------------------------------//
 //Send参数
-#define SendSet1 "{\"id\":\"%03bu\",\"version\":\"1.0\",\"params\":{%s},\"method\":\"thing.event.property.post\"}" //设备上报属性
-#define SendSet1Len 77                                                                                             //SendSet1字符串固定长度+id三位数=74+3=77
-#define SendSet2 "{\"id\":\"%03bu\",\"version\":\"1.0\",\"params\":{%s},\"method\":\"thing.event.%s.post\"}"       //设备上报事件
+//设备上报属性
+#define SendSet1 "{\"id\":\"%03bu\",\"version\":\"1.0\",\"params\":{%s},\"method\":\"thing.event.property.post\"}" 
+#define SendSet1Len 77   //SendSet1字符串固定长度+id三位数=74+3=77
+//设备上报事件
+#define SendSet2 "{\"id\":\"%03bu\",\"version\":\"1.0\",\"params\":{%s},\"method\":\"thing.event.%s.post\"}"       
 #define SendSet2Len 69
+//设备回应服务调用
+#define SendSet3 "{\"id\":\"%s\",\"code\":%06lu,\"data\":{%s}}"
+#define SendSet3Len 33   //SendSet3字符串固定长度+code6位数=27+6=33
 //------------------------------------------------------------------------------------------------//
 #endif

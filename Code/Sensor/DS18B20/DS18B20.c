@@ -103,13 +103,13 @@ bool DS18B20GetTemperature(void) //读取温度值
         DS18B20ST.TemperatureData = T; //更新温度数据
         CloudAct.NeedReport = true;    //与历史温度值不同,立即挂起设备上报任务
         if (DS18B20ST.TemperatureLow == false && T <= (DS18B20ST.TemperatureLowData1))
-            DS18B20ST.TemperatureLow = true, CloudAct.NeedReport_WaterTemperatureLow = true; //低温报警
+            DS18B20ST.TemperatureLow = true, CloudAct.NeedReport_Event_1 = true; //低温报警
         if (DS18B20ST.TemperatureLow == true && T >= (DS18B20ST.TemperatureLowData2))
-            DS18B20ST.TemperatureLow = false, CloudAct.NeedReport_WaterTemperatureLow = true; //低温报警取消
+            DS18B20ST.TemperatureLow = false, CloudAct.NeedReport_Event_1 = true; //低温报警取消
         if (DS18B20ST.TemperatureHigh == false && T >= (DS18B20ST.TemperatureHighData1))
-            DS18B20ST.TemperatureHigh = true, CloudAct.NeedReport_WaterTemperatureHigh = true; //高温报警
+            DS18B20ST.TemperatureHigh = true, CloudAct.NeedReport_Event_2 = true; //高温报警
         if (DS18B20ST.TemperatureHigh == true && T <= (DS18B20ST.TemperatureHighData2))
-            DS18B20ST.TemperatureHigh = false, CloudAct.NeedReport_WaterTemperatureHigh = true; //高温报警取消
+            DS18B20ST.TemperatureHigh = false, CloudAct.NeedReport_Event_2 = true; //高温报警取消
     }
     return EXIT_SUCCESS;
 }

@@ -25,16 +25,19 @@ void CloudLoop(void) //Cloud主循环
 	{
 		CloudReceive(); //##接收并处理串口缓冲区数据
 		CloudReSend(6); //##等待回复600ms超时,重新发送命令,从此往下都有可能处于WiFi断开连接的状态
-		//------DS18B20#汇报高低温报警------//
-		if (CloudAct.NeedReport_WaterTemperatureLow == true && CloudReport(1) == 0)
-			CloudAct.NeedReport_WaterTemperatureLow = false;
-		if (CloudAct.NeedReport_WaterTemperatureHigh == true && CloudReport(2) == 0)
-			CloudAct.NeedReport_WaterTemperatureHigh = false;
-		//------DS18B20#汇报当前参数------//
+		//------#汇报事件------//
+		if (CloudAct.NeedReport_Event_1 == true && CloudReport(1) == 0)
+			CloudAct.NeedReport_Event_1 = false;
+		if (CloudAct.NeedReport_Event_2 == true && CloudReport(2) == 0)
+			CloudAct.NeedReport_Event_2 = false;
+		//------#汇报参数------//
 		if (CloudAct.NeedReport == true && CloudReport(0) == 0)
 			CloudAct.NeedReport = false;
+		//------#应答服务------//
+		if (CloudAct.NeedReport_Service1 == true && CloudReport(200) == 0)
+			CloudAct.NeedReport_Service1 = false;
 	}
-    //-----------------------------传感器类任务-----------------------------//
+	//--------------------------------子设备类任务---------------------------------//
 	//------DS18B20#开始转换温度&读取温度值------//
     if (CloudAct.NeedReadDS18B20 == true && CloudAct.SysTime - CloudAct.NeedReadDS18B20_Ms >= DS18B20ConvertTMaxTime[DS18B20ST.ResolutionMode] && DS18B20GetTemperature() == EXIT_SUCCESS) //成功执行读取温度值
         CloudAct.NeedReadDS18B20 = false, CloudAct.NeedReadDS18B20_Ms = CloudAct.SysTime;
@@ -70,7 +73,7 @@ void CloudInit(void) //初始化Cloud
     while (CloudAct.NeedAns == true)
     {
         CloudReceive();
-		CloudReSend(100);//10,000ms等待
+		CloudReSend(30);//3,000ms等待
 		if(CloudAct.NeedAns_FailCount==1)//CloudReSend放弃发送
 		{
 			CloudAct.DisConectWiFi=true;//初始化失败,放弃连接WiFi模组,转为本地工作模式
@@ -236,6 +239,27 @@ void CloudInit(void) //初始化Cloud
     printf("LOG#:CloudInit-MQTT_Start ok\r\n"); //日志记录MQTT开启成功
 #endif
 //------------------------------------------------//
+    CloudAct.Cmd = AT_MQTTSUB; //设置MQTT订阅-服务1,SubCode=2
+    CloudAct.SubCode = 2;
+    CloudSend(0);
+    while (CloudAct.NeedAns == true)
+    {
+        CloudReceive();
+		CloudReSend(22);//2,200ms等待
+		if(CloudAct.NeedAns_FailCount==1)//CloudReSend放弃发送
+		{
+			CloudAct.DisConectWiFi=true;//初始化失败,放弃连接WiFi模组,转为本地工作模式
+#if LOGRANK_UART1 >= 2
+    printf("LOG#:CloudInit ##[Fail]##\r\n"); //日志记录Cloud初始化失败
+#endif
+			return;
+		}
+    }
+	CloudAct.SubisBusy|=0x04;       //2号Sub通道已占用
+#if LOGRANK_UART1 >= 2
+    printf("LOG#:CloudInit-MQTT_SUB_Service1 ok\r\n"); //日志记录MQTT订阅服务1成功
+#endif
+//------------------------------------------------//
     CloudAct.Cmd = AT_MQTTPUB; //设置MQTT发布-默认为参数发布PubCode=0
     CloudAct.PubCode_t = 0;
     CloudSend(0);
@@ -322,6 +346,13 @@ static bool CloudSend(uchar op) //发送命令到串口
             sprintf(CloudSendBuffer + CloudSendIdx, "=%s\r", MQTTAutoStart);
             break;
         case AT_MQTTSUB:
+			switch(CloudAct.SubCode)
+			{
+			case 2://订阅云端调用设备服务1
+				sprintf(CloudSendBuffer + CloudSendIdx, "=" SubscribeSet4 "\r",
+						CloudAct.SubCode,ProductKey, DeviceName,Service_1);
+				break;
+			}
             break;
         case AT_MQTTPUB:
             switch (CloudAct.PubCode_t) //目标Pub
@@ -335,7 +366,7 @@ static bool CloudSend(uchar op) //发送命令到串口
             case 2: //设备事件上报,Event_2:WaterTemperatureHigh
                 sprintf(CloudSendBuffer + CloudSendIdx, "=" PublishSet2 "\r",ProductKey, DeviceName, Event_2);
                 break;
-            case 200:
+            case 200://设置响应服务调用1,Service_1:LCD1602Display
                 sprintf(CloudSendBuffer + CloudSendIdx, "=" PublishSet3 "\r",ProductKey, DeviceName, Service_1);
                 break;
             }
@@ -355,8 +386,14 @@ static bool CloudSend(uchar op) //发送命令到串口
                 sprintf(CloudSendBuffer + CloudSendIdx, "=%u\r" SendSet2 "\r",
                         SendSet2Len + Event_2_Len + CloudSendDataIdx, CloudAct.MQTTSENDid, CloudSendData, Event_2);
                 break;
+			case 200://设置响应服务调用1,Service_1:LCD1602Display
+				sprintf(CloudSendBuffer + CloudSendIdx, "=%u\r" SendSet3 "\r",
+                        SendSet3Len + CloudAct.SubIdLen + CloudSendDataIdx,
+						CloudAct.SubId,CloudAct.NeedReport_ServiceReCode,CloudSendData);
+				break;
             }
-            ++CloudAct.MQTTSENDid;
+			if(CloudAct.PubCode<200)//非响应服务调用
+				++CloudAct.MQTTSENDid;//本地id号更新
             break; //MQTTSEND
         case AT_WJAP:
             sprintf(CloudSendBuffer + CloudSendIdx, "=%s,%s\r", WiFiSSID, WiFiPassword);
@@ -385,10 +422,11 @@ static bool CloudSend(uchar op) //发送命令到串口
 }
 static void CloudReSend(uchar Time)
 {
-	xdata ushort Timex=Time*100;
+	xdata ulong Timex=Time;
+	Timex*=100;
 	if(CloudAct.NeedAns==false)//不是等待应答状态
 		return;
-	if(CloudAct.SysTime-CloudAct.NeedAns_Time>=Timex)//等待应答超过500ms
+	if(CloudAct.SysTime-CloudAct.NeedAns_Time>=Timex)//等待应答超时
 	{
 		if(CloudAct.NeedAns_Count==2)//已经重新发送两次
 		{
@@ -480,6 +518,9 @@ static bool CloudReport(uchar Code) //设备上报
         case 2:
             CloudSendDataIdx = sprintf(CloudSendData, "\"Error\":%bu",DS18B20ST.TemperatureHigh);
             break;
+		case 200:
+			CloudSendDataIdx = sprintf(CloudSendData, "");//没有返回参数
+            break;
         }
     }
     CloudAct.Cmd = AT_MQTTSEND; //已写入设备待上报属性,准备发布
@@ -508,15 +549,62 @@ static void CloudHandleReceive(void)
     {
         if (strncmp(CloudReceiveBuffer + 1, "MQTTRECV", 8) == 0) //收到订阅信息
         {
+			pdata uchar *P=CloudReceiveBuffer+16,*Pend;//从这里开始查找id和params
+			pdata uchar i=0;
             switch (CloudReceiveBuffer[10]) //判断订阅的通道
             {
-            case '0': //属性设置通道
+            case '0': //云端响应属性上报,云端响应事件上报-常闭通道
                 break;
-            case '1': //设备服务调用
+            case '1': //云端设置设备属性
                 break;
-            case '3': //云端响应属性上报
+            case '2': //云端调用设备服务:1
+				P=strstr(P,"\"id\":\""),P+=6;
+				while(*P!='"')  //选用"作为结束标志
+					CloudAct.SubId[i++]=*P++;
+				CloudAct.SubIdLen=i;
+				P=strstr(P,"\"params\":{"),P+=10;
+				Pend=strchr(P,'}');
+			{
+				bool isRow2;
+				pdata uchar str[17]="                ",readcnt=0;//保证16个字符,刷新剩余部分为空白
+				while(P!=Pend)
+				{
+					++P;//跳过"
+					if(strncmp(P,"Text",4)==0)
+					{
+						pdata uchar i=0;
+						P+=7;
+						while(*P!='"')
+							str[i++]=*P++;
+						//str[i]=0;//完成字符串读取
+						++P;//跳过"
+					}
+					else
+					{
+						P+=8;
+						isRow2=(*P++)-'0';
+					}
+					++readcnt;//读到一个参数
+					if(*P==',')
+						++P;
+				}
+				if(readcnt==2)//参数读到两个,参数完整
+				{
+					LCD1602WriteLine(str,isRow2);//执行服务调用
+					CloudAct.NeedReport_ServiceReCode=200;//请求成功
+				}
+				else
+					CloudAct.NeedReport_ServiceReCode=460;//请求参数错误
+				CloudAct.NeedReport_Service1=true;//Service1需要回复
+			}
                 break;
-            case '4': //云端响应事件上报
+            case '3': //云端调用设备服务
+                break;
+            case '4': //云端调用设备服务
+                break;
+            case '5': //云端调用设备服务
+                break;
+            case '6': //云端调用设备服务
                 break;
             }
         }
@@ -525,8 +613,8 @@ static void CloudHandleReceive(void)
             if (CloudAct.Cmd == AT_MQTTSTART && (strncmp(CloudReceiveBuffer + 11, "CONNECT", 7) == 0))
                 if (strncmp(CloudReceiveBuffer + 19, "SUCCESS", 7) == 0)
                     CloudAct.NeedAns = false; //成功连接
-            if (CloudAct.Cmd == AT_MQTTSUB && (strncmp(CloudReceiveBuffer + 11, "SUBSCRIBE", 9) == 0))
-                if (strncmp(CloudReceiveBuffer + 21, "SUCCESS", 7) == 0)
+            if (CloudAct.Cmd == AT_MQTTSUB && (strncmp(CloudReceiveBuffer + 13, "SUBSCRIBE", 9) == 0))
+                if (strncmp(CloudReceiveBuffer + 23, "SUCCESS", 7) == 0)
                     CloudAct.NeedAns = false; //成功设置订阅
             if (CloudAct.Cmd == AT_MQTTSEND && (strncmp(CloudReceiveBuffer + 11, "PUBLISH", 7) == 0))
                 if (strncmp(CloudReceiveBuffer + 19, "SUCCESS", 7) == 0)

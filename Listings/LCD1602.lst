@@ -1,4 +1,4 @@
-C51 COMPILER V9.59.0.0   LCD1602                                                           04/15/2020 14:15:29 PAGE 1   
+C51 COMPILER V9.59.0.0   LCD1602                                                           04/17/2020 14:40:06 PAGE 1   
 
 
 C51 COMPILER V9.59.0.0, COMPILATION OF MODULE LCD1602
@@ -32,8 +32,8 @@ line level    source
   21   1              LCD1602WriteLine("LCD1602",false);
   22   1              LCD1602WriteLine("Ready",true);
   23   1      #if LOGRANK_UART1 >= 2
-                  printf("LOG#:LCD1602Init ok\r\n");
-              #endif
+  24   1          printf("LOG#:LCD1602Init ok\r\n");
+  25   1      #endif
   26   1      }
   27          void LCD1602WriteLine(uchar *Str,bool isLine2)//在1/2行写入字符串
   28          {
@@ -62,7 +62,7 @@ line level    source
   51   1          LCD1602_RS = 1;
   52   1          LCD1602_RW = 1;
   53   1          LCD1602_EN = 1;
-C51 COMPILER V9.59.0.0   LCD1602                                                           04/15/2020 14:15:29 PAGE 2   
+C51 COMPILER V9.59.0.0   LCD1602                                                           04/17/2020 14:40:06 PAGE 2   
 
   54   1              LCD1602_DATA=0xFF;
   55   1              delay_us(40);//等待中
@@ -117,8 +117,8 @@ line level    source
 
 
 MODULE INFORMATION:   STATIC OVERLAYABLE
-   CODE SIZE        =    289    ----
-   CONSTANT SIZE    =     30    ----
+   CODE SIZE        =    298    ----
+   CONSTANT SIZE    =     52    ----
    XDATA SIZE       =   ----    ----
    PDATA SIZE       =   ----    ----
    DATA SIZE        =   ----      10
@@ -126,7 +126,7 @@ MODULE INFORMATION:   STATIC OVERLAYABLE
    BIT SIZE         =   ----       3
    EDATA SIZE       =   ----    ----
    HDATA SIZE       =   ----    ----
-C51 COMPILER V9.59.0.0   LCD1602                                                           04/15/2020 14:15:29 PAGE 3   
+C51 COMPILER V9.59.0.0   LCD1602                                                           04/17/2020 14:40:06 PAGE 3   
 
    XDATA CONST SIZE =   ----    ----
    FAR CONST SIZE   =   ----    ----
