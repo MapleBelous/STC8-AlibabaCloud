@@ -20,8 +20,12 @@ code uchar Event_2[] = "WaterTemperatureHigh"; //事件2,PubCode=2
 code uchar Event_1_Len = 19;
 code uchar Event_2_Len = 20;
 //########Publish服务名称########//
-code uchar Service_1[] = "LCD1602Display"; //事件1,PubCode=200
+code uchar Service_1[] = "LCD1602Display"; //服务1,PubCode=200,SubCode=2
 code uchar Service_1_Len = 14;
+code uchar Service_2[] = "GY25Correction"; //服务2,PubCode=201,SubCode=3
+code uchar Service_2_Len = 14;
+code uchar Service_3[] = "MCUControl"; //服务3,PubCode=202,SubCode=4
+code uchar Service_3_Len = 10;
 //------------------------------------------------------------------------------------------------//
 //AT命令集
 code uchar ATCmd0[] = "MQTTAUTH";

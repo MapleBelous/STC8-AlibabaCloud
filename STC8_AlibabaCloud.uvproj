@@ -324,7 +324,7 @@
               <MiscControls></MiscControls>
               <Define></Define>
               <Undefine></Undefine>
-              <IncludePath>.\Code\Basic\def;.\Code\Basic\delay;.\Code\Basic\init;.\Code\Basic\uart;.\Code\Sensor\DS18B20;.\Code\Sensor\LCD1602;.\Code\AlibabaCloud</IncludePath>
+              <IncludePath>.\Code\Basic\def;.\Code\Basic\delay;.\Code\Basic\init;.\Code\Basic\uart;.\Code\Sensor\DS18B20;.\Code\Sensor\LCD1602;.\Code\AlibabaCloud;.\Code\Sensor\GY_25</IncludePath>
             </VariousControls>
           </C51>
           <Ax51>
@@ -420,6 +420,11 @@
               <FileName>LCD1602.c</FileName>
               <FileType>1</FileType>
               <FilePath>.\Code\Sensor\LCD1602\LCD1602.c</FilePath>
+            </File>
+            <File>
+              <FileName>GY_25.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Code\Sensor\GY_25\GY_25.c</FilePath>
             </File>
           </Files>
         </Group>

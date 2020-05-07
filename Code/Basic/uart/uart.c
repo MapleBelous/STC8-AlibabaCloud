@@ -1,9 +1,11 @@
 #include "uart.h"
 //------------------------------------------------------------------------------------------------//
-xdata uchar uart2_buffer[uart2_buffer_size];
-data ushort uart2_idx1, uart2_idx2;
+bool uart1Busy, uart2Busy, uart4Busy;
 
-bit uart1_busy, uart2_busy;
+xdata uchar uart2Buffer[uart2_buffer_size];
+data ushort uart2Idx1, uart2Idx2;
+xdata uchar uart4Buffer[uart4_buffer_size];
+data uchar uart4Idx1,uart4Idx2;
 //------------------------------------------------------------------------------------------------//
 #if LOGRANK_UART1 >= 1
 //-----------ÖØÐ´putcharº¯Êý-----------//
@@ -15,27 +17,37 @@ char putchar(char ch)
 }
 void uart1_send8(uchar dat)
 {
-    while (uart1_busy)
+    while (uart1Busy)
         continue;
-    uart1_busy = true;
+    uart1Busy = true;
     SBUF = dat;
-    while (uart1_busy)
+    while (uart1Busy)
         continue;
 }
 #endif
 
 void uart2_send8(uchar dat)
 {
-    while (uart2_busy)
+    while (uart2Busy)
         continue;
-    uart2_busy = true;
+    uart2Busy = true;
     S2BUF = dat;
-    while (uart2_busy)
+    while (uart2Busy)
         continue;
 }
 void uart2_sendstr8(uchar *p)
 {
 	while(*p)
 		uart2_send8(*p++);
+}
+
+void uart4_send8(uchar dat)
+{
+    while (uart4Busy)
+        continue;
+    uart4Busy = true;
+    S4BUF = dat;
+    while (uart4Busy)
+        continue;
 }
 //------------------------------------------------------------------------------------------------//

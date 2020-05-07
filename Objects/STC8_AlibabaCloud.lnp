@@ -5,6 +5,7 @@
 ".\Objects\delay.obj",
 ".\Objects\DS18B20.obj",
 ".\Objects\LCD1602.obj",
+".\Objects\GY_25.obj",
 ".\Objects\CloudHandle.obj",
 ".\Objects\CloudCodeArray.obj" 
 TO ".\Objects\STC8_AlibabaCloud" 

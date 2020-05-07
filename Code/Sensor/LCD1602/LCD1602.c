@@ -18,8 +18,6 @@ void LCD1602Init(void) //初始化LCD1602
 	//加载自制字模
 	LCD1602LoadWord(0,LCD1602Word_Temperature);
 	LCD1602LoadWord(1,LCD1602Word_Heart);
-	LCD1602WriteLine("LCD1602",false);
-	LCD1602WriteLine("Ready",true);
 #if LOGRANK_UART1 >= 2
     printf("LOG#:LCD1602Init ok\r\n");
 #endif

@@ -1,11 +1,11 @@
-C51 COMPILER V9.59.0.0   DS18B20                                                           04/17/2020 16:44:00 PAGE 1   
+C51 COMPILER V9.59.0.0   DS18B20                                                           05/06/2020 16:02:26 PAGE 1   
 
 
 C51 COMPILER V9.59.0.0, COMPILATION OF MODULE DS18B20
 OBJECT MODULE PLACED IN .\Objects\DS18B20.obj
 COMPILER INVOKED BY: C:\Keil_v5\C51\BIN\C51.EXE Code\Sensor\DS18B20\DS18B20.c OMF2 OPTIMIZE(9,SPEED) BROWSE MODP2 INCDIR
                     -(.\Code\Basic\def;.\Code\Basic\delay;.\Code\Basic\init;.\Code\Basic\uart;.\Code\Sensor\DS18B20;.\Code\Sensor\LCD1602;.\C
-                    -ode\AlibabaCloud) DEBUG PRINT(.\Listings\DS18B20.lst) OBJECT(.\Objects\DS18B20.obj)
+                    -ode\AlibabaCloud;.\Code\Sensor\GY_25) DEBUG PRINT(.\Listings\DS18B20.lst) OBJECT(.\Objects\DS18B20.obj)
 
 line level    source
 
@@ -23,51 +23,51 @@ line level    source
   12          {
   13   1          uchar Temp, TH, TL;
   14   1          memset(&DS18B20ST, 0, sizeof(DS18B20ActST)); //初始化后的缓存温度值应为DS18B20MinT
-  15   1          if (DS18B20Init() == EXIT_FAILURE)           //DS18B20初始化失败
-  16   1          {
-  17   2      #if LOGRANK_UART1 >= 1
-  18   2              printf("ERR:DS18B20Init fail when DS18B20STInit!\r\n");
-  19   2      #endif
-  20   2              return; //放弃读取DS18B20分辨率.并日志记录ERR信息
-  21   2          }
-  22   1          DS18B20WriteByte(DS18B20SkipROM);                   //写入跳过ROM操作
-  23   1          DS18B20WriteByte(DS18B20ReadRAM);                   //写入读取RAM指令
-  24   1          Temp = DS18B20ReadByte(), Temp = DS18B20ReadByte(); //跳过温度,此时不能趁机读取温度,是无效值
-  25   1          TH = DS18B20ReadByte(), TL = DS18B20ReadByte();     //跳过TH/TL
-  26   1          Temp = DS18B20ReadByte();                           //读取配置寄存器
-  27   1          DS18B20ST.ResolutionMode = (Temp >> 5) & 0x03;      //存入DS18B20任务指示器中
-  28   1          DS18B20ST.TemperatureHighData1 = TemperatureH;      //确定当前Mode下高温报警阈值
-  29   1          DS18B20ST.TemperatureHighData2 = DS18B20ST.TemperatureHighData1 - TemperatureT;
-  30   1          DS18B20ST.TemperatureLowData1 = TemperatureL; //确定当前Mode下低温报警阈值
-  31   1          DS18B20ST.TemperatureLowData2 = DS18B20ST.TemperatureLowData1 + TemperatureT;
-  32   1          DS18B20ConvertTemperature();      //初始化-开始转换温度#忽略返回值
-  33   1          switch (DS18B20ST.ResolutionMode) //对应Mode延时
-  34   1          {
-  35   2          case 0:
-  36   2              delay_ms(100);
-  37   2              break;
-  38   2          case 1:
-  39   2              delay_ms(200);
-  40   2              break;
-  41   2          case 2:
-  42   2              delay_ms(385);
-  43   2              break;
-  44   2          case 3:
-  45   2              delay_ms(765);
-  46   2              break;
-  47   2          }
-  48   1          DS18B20GetTemperature(); //初始化-读取温度值#忽略返回值
+  15   1          while (DS18B20Init() == EXIT_FAILURE)        //DS18B20初始化
+  16   1                      continue;
+  17   1          DS18B20WriteByte(DS18B20SkipROM);                   //写入跳过ROM操作
+  18   1          DS18B20WriteByte(DS18B20ReadRAM);                   //写入读取RAM指令
+  19   1          Temp = DS18B20ReadByte(), Temp = DS18B20ReadByte(); //跳过温度,此时不能趁机读取温度,是无效值
+  20   1          TH = DS18B20ReadByte(), TL = DS18B20ReadByte();     //跳过TH/TL
+  21   1          Temp = DS18B20ReadByte();                           //读取配置寄存器
+  22   1          DS18B20ST.ResolutionMode = (Temp >> 5) & 0x03;      //存入DS18B20任务指示器中
+  23   1          DS18B20ST.TemperatureHighData1 = TemperatureH;      //确定当前Mode下高温报警阈值
+  24   1          DS18B20ST.TemperatureHighData2 = DS18B20ST.TemperatureHighData1 - TemperatureT;
+  25   1          DS18B20ST.TemperatureLowData1 = TemperatureL; //确定当前Mode下低温报警阈值
+  26   1          DS18B20ST.TemperatureLowData2 = DS18B20ST.TemperatureLowData1 + TemperatureT;
+  27   1          while(DS18B20ConvertTemperature()==EXIT_FAILURE)
+  28   1                      continue;      //初始化-开始转换温度
+  29   1      #if LOGRANK_UART1 >= 2
+                  printf("LOG#:DS18B20Init ConvertT ok\r\n");
+              #endif
+  32   1          switch (DS18B20ST.ResolutionMode) //对应Mode延时
+  33   1          {
+  34   2          case 0:
+  35   2              delay_ms(100);
+  36   2              break;
+  37   2          case 1:
+  38   2              delay_ms(200);
+  39   2              break;
+  40   2          case 2:
+  41   2              delay_ms(385);
+  42   2              break;
+  43   2          case 3:
+  44   2              delay_ms(765);
+  45   2              break;
+  46   2          }
+  47   1          while(DS18B20GetTemperature()==EXIT_FAILURE)
+  48   1                      continue; //初始化-读取温度值
   49   1      #if LOGRANK_UART1 >= 2
-  50   1          printf("LOG#:DS18B20Init ok\r\n");
-  51   1      #endif
+                  printf("LOG#:DS18B20Init ok\r\n");
+              #endif
   52   1      #if LOGRANK_UART1 >= 3
-  53   1          printf("LOG:T-%u,TH-%bu,TL-%bu,Mode-%bu,H1-%u,H2-%u,L1-%u,L2-%u\r\n",
-C51 COMPILER V9.59.0.0   DS18B20                                                           04/17/2020 16:44:00 PAGE 2   
+                  printf("LOG:T-%u,TH-%bu,TL-%bu,Mode-%bu,H1-%u,H2-%u,L1-%u,L2-%u\r\n",
+C51 COMPILER V9.59.0.0   DS18B20                                                           05/06/2020 16:02:26 PAGE 2   
 
-  54   1                 DS18B20ST.TemperatureData,TH, TL, DS18B20ST.ResolutionMode,
-  55   1                 DS18B20ST.TemperatureHighData1, DS18B20ST.TemperatureHighData2,
-  56   1                 DS18B20ST.TemperatureLowData1, DS18B20ST.TemperatureLowData2);
-  57   1      #endif
+                         DS18B20ST.TemperatureData,TH, TL, DS18B20ST.ResolutionMode,
+                         DS18B20ST.TemperatureHighData1, DS18B20ST.TemperatureHighData2,
+                         DS18B20ST.TemperatureLowData1, DS18B20ST.TemperatureLowData2);
+              #endif
   58   1      }
   59          bool DS18B20Set(char TH, char TL, uchar Mode) //设置并保存TH/TL/Mode
   60          {
@@ -115,83 +115,84 @@ line level    source
  102   1          {
  103   2              DS18B20ST.TemperatureData = T; //更新温度数据
  104   2              CloudAct.NeedReport = true;    //与历史温度值不同,立即挂起设备上报任务
- 105   2              if (DS18B20ST.TemperatureLow == false && T <= (DS18B20ST.TemperatureLowData1))
- 106   2                  DS18B20ST.TemperatureLow = true, CloudAct.NeedReport_Event_1 = true; //低温报警
- 107   2              if (DS18B20ST.TemperatureLow == true && T >= (DS18B20ST.TemperatureLowData2))
- 108   2                  DS18B20ST.TemperatureLow = false, CloudAct.NeedReport_Event_1 = true; //低温报警取消
- 109   2              if (DS18B20ST.TemperatureHigh == false && T >= (DS18B20ST.TemperatureHighData1))
- 110   2                  DS18B20ST.TemperatureHigh = true, CloudAct.NeedReport_Event_2 = true; //高温报警
- 111   2              if (DS18B20ST.TemperatureHigh == true && T <= (DS18B20ST.TemperatureHighData2))
- 112   2                  DS18B20ST.TemperatureHigh = false, CloudAct.NeedReport_Event_2 = true; //高温报警取消
- 113   2          }
- 114   1          return EXIT_SUCCESS;
- 115   1      }
-C51 COMPILER V9.59.0.0   DS18B20                                                           04/17/2020 16:44:00 PAGE 3   
+ 105   2                      CloudAct.NeedReportT.DS18B20 = true;
+ 106   2              if (DS18B20ST.TemperatureLow == false && T <= (DS18B20ST.TemperatureLowData1))
+ 107   2                  DS18B20ST.TemperatureLow = true, CloudAct.NeedReport_Event_1 = true; //低温报警
+ 108   2              if (DS18B20ST.TemperatureLow == true && T >= (DS18B20ST.TemperatureLowData2))
+ 109   2                  DS18B20ST.TemperatureLow = false, CloudAct.NeedReport_Event_1 = true; //低温报警取消
+ 110   2              if (DS18B20ST.TemperatureHigh == false && T >= (DS18B20ST.TemperatureHighData1))
+ 111   2                  DS18B20ST.TemperatureHigh = true, CloudAct.NeedReport_Event_2 = true; //高温报警
+ 112   2              if (DS18B20ST.TemperatureHigh == true && T <= (DS18B20ST.TemperatureHighData2))
+ 113   2                  DS18B20ST.TemperatureHigh = false, CloudAct.NeedReport_Event_2 = true; //高温报警取消
+ 114   2          }
+ 115   1          return EXIT_SUCCESS;
+C51 COMPILER V9.59.0.0   DS18B20                                                           05/06/2020 16:02:26 PAGE 3   
 
- 116          //------------------------------------------------------------------------------------------------//
- 117          static bool DS18B20Init(void) //初始化程序
- 118          {
- 119   1          pdata uchar i = 20;
- 120   1          DS18B20_DATA = 1, delay_us(60), DS18B20_DATA = 0;
- 121   1          delay_us(485), DS18B20_DATA = 1; //延时等待后上拉总线
- 122   1          do
- 123   1          {
- 124   2              delay_us(10);
- 125   2          } while (DS18B20_DATA == 1 && (--i)); //等待DS18B20应答
- 126   1          if (i == 0)
- 127   1          {
- 128   2      #if LOGRANK_UART1 >= 1
- 129   2              printf("ERR:DS18B20Init fail\r\n"); //日志记录DS18B20初始化未收到应答
- 130   2      #endif
- 131   2              return EXIT_FAILURE;
- 132   2          }
- 133   1          DS18B20_DATA = 1; //发送已经就位
- 134   1          delay_us(130);    //等待DS18B20就位,实测150以上绝对稳定
- 135   1          return EXIT_SUCCESS;
- 136   1      }
- 137          static void DS18B20WriteByte(uchar Byte) //写入一个字节数据
- 138          {
- 139   1          pdata uchar i;
- 140   1          for (i = 0; i != 8; ++i, Byte >>= 1)
- 141   1          {
- 142   2              DS18B20_DATA = 0;
- 143   2              delay_us(1);
- 144   2              DS18B20_DATA = Byte & 0x01;
- 145   2              delay_us(60);
- 146   2              DS18B20_DATA = 1;
- 147   2              delay_us(1);
- 148   2          }
- 149   1      }
- 150          static uchar DS18B20ReadByte(void) //读取一个字节数据
- 151          {
- 152   1          pdata uchar i, re;
- 153   1          DS18B20_DATA = 1;
- 154   1          delay_us(10);
- 155   1          for (i = 0, re = 0; i != 8; ++i)
- 156   1          {
- 157   2              re >>= 1;
- 158   2              DS18B20_DATA = 0;
- 159   2              delay_us(1);
- 160   2              DS18B20_DATA = 1;
- 161   2              delay_us(1);
- 162   2              if (DS18B20_DATA == 1)
- 163   2                  re |= 0x80;
- 164   2              delay_us(60);
- 165   2          }
- 166   1          return re;
- 167   1      }
- 168          //------------------------------------------------------------------------------------------------//
+ 116   1      }
+ 117          //------------------------------------------------------------------------------------------------//
+ 118          static bool DS18B20Init(void) //初始化程序
+ 119          {
+ 120   1          pdata uchar i = 20;
+ 121   1          DS18B20_DATA = 1, delay_us(60), DS18B20_DATA = 0;
+ 122   1          delay_us(485), DS18B20_DATA = 1; //延时等待后上拉总线
+ 123   1          do
+ 124   1          {
+ 125   2              delay_us(10);
+ 126   2          } while (DS18B20_DATA == 1 && (--i)); //等待DS18B20应答
+ 127   1          if (i == 0)
+ 128   1          {
+ 129   2      #if LOGRANK_UART1 >= 1
+                      printf("ERR:DS18B20Init fail\r\n"); //日志记录DS18B20初始化未收到应答
+              #endif
+ 132   2              return EXIT_FAILURE;
+ 133   2          }
+ 134   1          DS18B20_DATA = 1; //发送已经就位
+ 135   1          delay_us(130);    //等待DS18B20就位,实测150以上绝对稳定
+ 136   1          return EXIT_SUCCESS;
+ 137   1      }
+ 138          static void DS18B20WriteByte(uchar Byte) //写入一个字节数据
+ 139          {
+ 140   1          pdata uchar i;
+ 141   1          for (i = 0; i != 8; ++i, Byte >>= 1)
+ 142   1          {
+ 143   2              DS18B20_DATA = 0;
+ 144   2              delay_us(1);
+ 145   2              DS18B20_DATA = Byte & 0x01;
+ 146   2              delay_us(60);
+ 147   2              DS18B20_DATA = 1;
+ 148   2              delay_us(1);
+ 149   2          }
+ 150   1      }
+ 151          static uchar DS18B20ReadByte(void) //读取一个字节数据
+ 152          {
+ 153   1          pdata uchar i, re;
+ 154   1          DS18B20_DATA = 1;
+ 155   1          delay_us(10);
+ 156   1          for (i = 0, re = 0; i != 8; ++i)
+ 157   1          {
+ 158   2              re >>= 1;
+ 159   2              DS18B20_DATA = 0;
+ 160   2              delay_us(1);
+ 161   2              DS18B20_DATA = 1;
+ 162   2              delay_us(1);
+ 163   2              if (DS18B20_DATA == 1)
+ 164   2                  re |= 0x80;
+ 165   2              delay_us(60);
+ 166   2          }
+ 167   1          return re;
+ 168   1      }
+ 169          //------------------------------------------------------------------------------------------------//
 
 
 MODULE INFORMATION:   STATIC OVERLAYABLE
-   CODE SIZE        =    956    ----
-   CONSTANT SIZE    =    170    ----
+   CODE SIZE        =    872    ----
+   CONSTANT SIZE    =     24    ----
    XDATA SIZE       =     11    ----
    PDATA SIZE       =   ----      10
    DATA SIZE        =   ----       6
-   IDATA SIZE       =   ----    ----
-C51 COMPILER V9.59.0.0   DS18B20                                                           04/17/2020 16:44:00 PAGE 4   
+C51 COMPILER V9.59.0.0   DS18B20                                                           05/06/2020 16:02:26 PAGE 4   
 
+   IDATA SIZE       =   ----    ----
    BIT SIZE         =   ----    ----
    EDATA SIZE       =   ----    ----
    HDATA SIZE       =   ----    ----

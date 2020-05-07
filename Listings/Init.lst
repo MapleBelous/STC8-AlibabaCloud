@@ -1,11 +1,11 @@
-C51 COMPILER V9.59.0.0   INIT                                                              04/17/2020 16:44:00 PAGE 1   
+C51 COMPILER V9.59.0.0   INIT                                                              05/06/2020 16:02:25 PAGE 1   
 
 
 C51 COMPILER V9.59.0.0, COMPILATION OF MODULE INIT
 OBJECT MODULE PLACED IN .\Objects\Init.obj
 COMPILER INVOKED BY: C:\Keil_v5\C51\BIN\C51.EXE Code\Basic\init\Init.c OMF2 OPTIMIZE(9,SPEED) BROWSE MODP2 INCDIR(.\Code
                     -\Basic\def;.\Code\Basic\delay;.\Code\Basic\init;.\Code\Basic\uart;.\Code\Sensor\DS18B20;.\Code\Sensor\LCD1602;.\Code\Ali
-                    -babaCloud) DEBUG PRINT(.\Listings\Init.lst) OBJECT(.\Objects\Init.obj)
+                    -babaCloud;.\Code\Sensor\GY_25) DEBUG PRINT(.\Listings\Init.lst) OBJECT(.\Objects\Init.obj)
 
 line level    source
 
@@ -16,124 +16,145 @@ line level    source
    5          static void Init_timer0(void);
    6          static void Init_uart1(void);
    7          static void Init_uart2(void);
-   8          static void Init_wkt(float,bool);
-   9          static void Init_interrupt(void);
-  10          //------------------------------------------------------------------------------------------------//
-  11          
-  12          void Init(void)
-  13          {
-  14   1          //ÄÚ²¿
-  15   1          Init_rst();       //µÍÑ¹¸´Î»&¿´ÃÅ¹·³õÊ¼»¯
-  16   1          Init_io();        //IO¿Ú³õÊ¼»¯
-  17   1          Init_timer0();    //¶¨Ê±Æ÷0³õÊ¼»¯
-  18   1      #if LOGRANK_UART1 >= 1
-  19   1          Init_uart1();     //´®¿Ú1-USBµ÷ÊÔ³õÊ¼»¯
-  20   1      #endif
-  21   1          Init_uart2();     //´®¿Ú2-Wifi EMW3080³õÊ¼»¯
-  22   1              Init_wkt(1.0,false);//ÉèÖÃµôµç»½ÐÑ¼ÆÊ±Æ÷,µ¥Î»ms.ÔÊÐí0.5ms-min(0),16384ms-max(32767);Ã¿´ÎÔö³¤0.5ms
-  23   1          Init_interrupt(); //ÖÐ¶ÏÏµÍ³³õÊ¼»¯-¿ª¹Ø ÓÅÏÈ¼¶
-  24   1      #if LOGRANK_UART1 >= 2
-  25   1              printf("LOG#:Internal Init Finish\r\n");
-  26   1      #endif
-  27   1              
-  28   1          //Íâ²¿
-  29   1              CloudInit();
-  30   1          DS18B20STInit(); //³õÊ¼»¯DS18B20ÄÚ´æ&¶ÁÈ¡µ±Ç°DS18B20·Ö±æÂÊ
-  31   1              LCD1602Init();    ////³õÊ¼»¯LCD1602
-  32   1      #if LOGRANK_UART1 >= 2
-  33   1          printf("LOG#:External Init Finish\r\n");
-  34   1      #endif
-  35   1      }
-  36          void Init_rst(void)
-  37          {
-  38   1          //¿´ÃÅ¹·¼Ä´æÆ÷ // WDT_FLAG - EN_WDT CLR_WDT IDL_WDT WDT_PS[2:0]
-  39   1          WDT_CONTR = WDT_CONTR & ~EN_WDT;//¿ª¹Ø¿´ÃÅ¹·
-  40   1              //WDT_CONTR |= 0x07;//¿´ÃÅ¹··ÖÆµÏµÊý×î´ó
-  41   1          //µÍÑ¹¸´Î»/RSTÒý½Å ÅäÖÃ¼Ä´æÆ÷ // - ENLVR - P54RST - - LVDS[1:0]
-  42   1          RSTCFG = RSTCFG & ~0x40 & ~0x10;
-  43   1          RSTCFG &= 0xFC; //LVDS[1:0] µÍÑ¹¼ì²âÃÅ¼÷µçÑ¹:00 2.2V/01 2.4V/10 2.7V/11 3.0V
-  44   1      }
-  45          void Init_io(void)
-  46          {
-  47   1          P3M1 &= 0xFE, P3M0 &= 0xFE; //P3.0Îª×¼Ë«Ïò¿Ú
-  48   1          P3M1 &= 0xFD, P3M0 |= 0x02; //P3.1ÎªÍÆÍìÊä³ö
-  49   1      
-  50   1          P1M1 &= 0xFE, P1M0 &= 0xFE; //P1.0Îª×¼Ë«Ïò¿Ú
-  51   1          P1M1 &= 0xFD, P1M0 |= 0x02; //P1.1ÎªÍÆÍìÊä³ö
-  52   1      
-  53   1          P3M1 &= 0xBF, P3M0 |= 0x40; //P3.6ÎªÍÆÍìÊä³ö
-C51 COMPILER V9.59.0.0   INIT                                                              04/17/2020 16:44:00 PAGE 2   
+   8          static void Init_uart4(void);
+   9          static void Init_wkt(float,bool);
+  10          static void Init_interrupt(void);
+  11          //------------------------------------------------------------------------------------------------//
+  12          
+  13          void Init(void)
+  14          {
+  15   1          //ÄÚ²¿
+  16   1          Init_rst();       //µÍÑ¹¸´Î»&¿´ÃÅ¹·³õÊ¼»¯
+  17   1          Init_io();        //IO¿Ú³õÊ¼»¯
+  18   1          Init_timer0();    //¶¨Ê±Æ÷0³õÊ¼»¯
+  19   1      #if LOGRANK_UART1 >= 1
+                  Init_uart1();     //´®¿Ú1-USBµ÷ÊÔ³õÊ¼»¯
+              #endif
+  22   1          Init_uart2();     //´®¿Ú2-Wifi*EMW3080³õÊ¼»¯
+  23   1              Init_uart4();     //´®¿Ú4-·½Î»½Ç´«¸ÐÆ÷GY-25³õÊ¼»¯
+  24   1              Init_wkt(1.0,false);//ÉèÖÃµôµç»½ÐÑ¼ÆÊ±Æ÷,µ¥Î»ms.ÔÊÐí0.5ms-min(0),16384ms-max(32767);Ã¿´ÎÔö³¤0.5ms
+  25   1          Init_interrupt(); //ÖÐ¶ÏÏµÍ³³õÊ¼»¯-¿ª¹Ø ÓÅÏÈ¼¶
+  26   1      #if LOGRANK_UART1 >= 2
+                  printf("LOG#:Internal Init Finish\r\n");
+              #endif
+  29   1          //Íâ²¿
+  30   1              CloudInit();
+  31   1          DS18B20STInit(); //³õÊ¼»¯DS18B20ÄÚ´æ&¶ÁÈ¡µ±Ç°DS18B20·Ö±æÂÊ
+  32   1              GY_25Init();    //³õÊ¼»¯GY_25
+  33   1              LCD1602Init();    ////³õÊ¼»¯LCD1602
+  34   1      #if LOGRANK_UART1 >= 2
+                  printf("LOG#:External Init Finish\r\n");
+              #endif
+  37   1      }
+  38          void Init_rst(void)
+  39          {
+  40   1          //¿´ÃÅ¹·¼Ä´æÆ÷ // WDT_FLAG - EN_WDT CLR_WDT IDL_WDT WDT_PS[2:0]
+  41   1          WDT_CONTR = WDT_CONTR & ~EN_WDT;//¿ª¹Ø¿´ÃÅ¹·
+  42   1              //WDT_CONTR |= 0x07;//¿´ÃÅ¹··ÖÆµÏµÊý×î´ó
+  43   1          //µÍÑ¹¸´Î»/RSTÒý½Å ÅäÖÃ¼Ä´æÆ÷ // - ENLVR - P54RST - - LVDS[1:0]
+  44   1          RSTCFG = RSTCFG & ~0x40 & ~0x10;
+  45   1          RSTCFG &= 0xFC; //LVDS[1:0] µÍÑ¹¼ì²âÃÅ¼÷µçÑ¹:00 2.2V/01 2.4V/10 2.7V/11 3.0V
+  46   1      }
+  47          void Init_io(void)
+  48          {
+  49   1              //´®¿Ú1
+  50   1          P3M1 &= ~0x01, P3M0 &= ~0x01; //P3.0Îª×¼Ë«Ïò¿Ú
+  51   1          P3M1 &= ~0x02, P3M0 |= 0x02; //P3.1ÎªÍÆÍìÊä³ö
+  52   1              //´®¿Ú2
+  53   1          P1M1 &= ~0x01, P1M0 &= ~0x01; //P1.0Îª×¼Ë«Ïò¿Ú
+C51 COMPILER V9.59.0.0   INIT                                                              05/06/2020 16:02:25 PAGE 2   
 
-  54   1      }
-  55          void Init_timer0(void)//1ms
-  56          {
-  57   1              AUXR |= 0x80;           //¶¨Ê±Æ÷Ê±ÖÓ1TÄ£Ê½
-  58   1              TMOD &= 0xF0;           //ÉèÖÃ¶¨Ê±Æ÷Ä£Ê½
-  59   1              TL0 = 0x9A;             //ÉèÖÃ¶¨Ê±³õÖµ
-  60   1              TH0 = 0xA9;             //ÉèÖÃ¶¨Ê±³õÖµ
-  61   1              TF0 = 0;                //Çå³ýTF0±êÖ¾
-  62   1              TR0 = 1;                //¶¨Ê±Æ÷0¿ªÊ¼¼ÆÊ±
-  63   1      }
-  64          #if LOGRANK_UART1 >= 1
-  65          void Init_uart1(void)
-  66          {
-  67   1              //Óë´®¿Ú2¹²ÓÃ¶¨Ê±Æ÷2
-  68   1          SCON = 0x40;                 // SM0/FE [SM1] SM2 REN TB8 RB8 TI RI
-  69   1          PCON &= 0x3F;                // [~SMOD ~SMOD0] LVDF POF GF1 GF0 PD IDL
-  70   1          AUXR = AUXR | S1ST2; // T0x12 T1x12 UART_M0x6 T2R T2_C/T T2x12 EXTRAM [S1ST2]
-  71   1          uart1_busy = false;
-  72   1      }
-  73          #endif
-  74          void Init_uart2(void)
-  75          {
-  76   1              //¶¨Ê±Æ÷2
-  77   1              ulong BTL = UART_16(115200, 1);
-  78   1              AUXR |= T2x12;//T2ËÙ¶Èx12
-  79   1              T2L = BTL & 0xFF;
-  80   1          T2H = BTL >> 8;
-  81   1          S2CON = 0x10;   // [~S4SM0] [/] S4SM2 [S4REN] S4TB8 S4RB8 S4TI S4RI
-  82   1              
-  83   1          uart2_busy=false;
-  84   1          uart2_idx1 = uart2_idx2 = 0;
-  85   1              
-  86   1          AUXR |= T2R; //¿ªÆô¶¨Ê±Æ÷2
-  87   1      }
-  88          void Init_wkt(float ms,bool en)//ÉèÖÃµôµç»½ÐÑ¼ÆÊ±Æ÷,µ¥Î»ms.ÔÊÐí0.5ms-min(0),16384ms-max(32767);Ã¿´ÎÔö³¤0.5
+  54   1          P1M1 &= ~0x02, P1M0 |= 0x02; //P1.1ÎªÍÆÍìÊä³ö
+  55   1              //´®¿Ú4
+  56   1          P0M1 &= ~0x04, P0M0 &= ~0x04; //P0.2Îª×¼Ë«Ïò¿Ú
+  57   1          P0M1 &= ~0x08, P0M0 |= 0x08; //P0.3ÎªÍÆÍìÊä³ö
+  58   1      }
+  59          void Init_timer0(void)//1ms
+  60          {
+  61   1              AUXR |= 0x80;           //¶¨Ê±Æ÷Ê±ÖÓ1TÄ£Ê½
+  62   1              TMOD &= 0xF0;           //ÉèÖÃ¶¨Ê±Æ÷Ä£Ê½
+  63   1              TL0 = 0x9A;             //ÉèÖÃ¶¨Ê±³õÖµ
+  64   1              TH0 = 0xA9;             //ÉèÖÃ¶¨Ê±³õÖµ
+  65   1              TF0 = 0;                //Çå³ýTF0±êÖ¾
+  66   1              TR0 = 1;                //¶¨Ê±Æ÷0¿ªÊ¼¼ÆÊ±
+  67   1      }
+  68          #if LOGRANK_UART1 >= 1
+              void Init_uart1(void)
+              {
+                      //Óë´®¿Ú2¹²ÓÃ¶¨Ê±Æ÷2
+                  SCON = 0x40;                 // SM0/FE [SM1] SM2 REN TB8 RB8 TI RI
+                  PCON &= 0x3F;                // [~SMOD ~SMOD0] LVDF POF GF1 GF0 PD IDL //²¨ÌØÂÊ²»·­±¶£¬²»²ÉÓÃÖ¡´íÎó¼ì²
+             -â
+                  AUXR |= S1ST2; // T0x12 T1x12 UART_M0x6 T2R T2_C/T T2x12 EXTRAM [S1ST2]//Ñ¡ÓÃ¶¨Ê±Æ÷2
+                      
+                  uart1Busy = false;
+              }
+              #endif
+  79          void Init_uart2(void)
+  80          {
+  81   1              //¶¨Ê±Æ÷2
+  82   1              ulong BTL = UART_16(115200, 1);
+  83   1              AUXR |= T2x12;//T2ËÙ¶Èx12
+  84   1              T2L = BTL & 0xFF;
+  85   1          T2H = BTL >> 8;
+  86   1              
+  87   1          S2CON = 0x10;   // [~S4SM0] [/] S4SM2 [S4REN] S4TB8 S4RB8 S4TI S4RI
+  88   1              
+  89   1          uart2Busy = false;
+  90   1          uart2Idx1 = uart2Idx2 = 0;
+  91   1          AUXR |= T2R; //¿ªÆô¶¨Ê±Æ÷2
+  92   1      }
+  93          void Init_uart4(void)
+  94          {
+  95   1              //¶¨Ê±Æ÷4
+  96   1              ulong BTL = UART_16(9600,1);
+  97   1              T4T3M |= T4x12;//T4ËÙ¶Èx12
+  98   1              T4L = BTL & 0xFF;
+  99   1          T4H = BTL >> 8;
+ 100   1              
+ 101   1              S4CON = 0x50;
+ 102   1              
+ 103   1          uart4Busy = false;
+ 104   1          uart4Idx1 = uart4Idx2 = 0;
+ 105   1              T4T3M |= T4R;//¿ªÆô¶¨Ê±Æ÷4
+ 106   1      }
+ 107          void Init_wkt(float ms,bool en)//ÉèÖÃµôµç»½ÐÑ¼ÆÊ±Æ÷,µ¥Î»ms.ÔÊÐí0.5ms-min(0),16384ms-max(32767);Ã¿´ÎÔö³¤0.5
              -ms
-  89          {
-  90   1              pdata ushort T;
-  91   1              if(en==false)
-  92   1                      return;
-  93   1              T = ((ms*2.0)-1);
-  94   1              T &= 0x7FFF;
-  95   1              WKTCL = T&0x00FF;
-  96   1              WKTCH = (T>>8)&0x007F;
-  97   1              WKTCH |= 0x80;//¿ªÆôµôµç»½ÐÑ¼ÆÊ±Æ÷
-  98   1      }
-  99          void Init_interrupt(void)
- 100          {
- 101   1          ET0 = 1;                 //¿ªÆô¶¨Ê±Æ÷0ÖÐ¶Ï
- 102   1          ES = 1, IE2 &= ~ET2;     //¿ªÆô´®¿Ú1ÖÐ¶Ï,¹Ø±Õ¶¨Ê±Æ÷2ÖÐ¶Ï
- 103   1          IE2 |= ES2;                                 //¿ªÆô´®¿Ú2ÖÐ¶Ï
- 104   1      
- 105   1          PT0 = 0, IPH |= PT0H; //¶¨Ê±Æ÷0ÓÅÏÈ¼¶2,ÏµÍ³Ê±¼ä¾¡¿ÉÄÜ¾«È·,×î¸ßÓÅÏÈ¼¶
- 106   1          PS = 0, IPH &= ~PSH;  //´®¿Ú1ÓÅÏÈ¼¶0
- 107   1              IP2 |= PS2, IP2H |= PS2H;//´®¿Ú2ÓÅÏÈ¼¶3
- 108   1      
- 109   1          EA = 1; //¿ªÆô×ÜÖÐ¶Ï¿ª¹Ø
- 110   1      }
- 111          
- 112          //------------------------------------------------------------------------------------------------//
+ 108          {
+ 109   1              pdata ushort T;
+ 110   1              if(en==false)
+ 111   1                      return;
+ 112   1              T = ((ms*2.0)-1);
+ 113   1              T &= 0x7FFF;
+C51 COMPILER V9.59.0.0   INIT                                                              05/06/2020 16:02:25 PAGE 3   
 
+ 114   1              WKTCL = T&0x00FF;
+ 115   1              WKTCH = (T>>8)&0x007F;
+ 116   1              WKTCH |= 0x80;//¿ªÆôµôµç»½ÐÑ¼ÆÊ±Æ÷
+ 117   1      }
+ 118          void Init_interrupt(void)
+ 119          {
+ 120   1          ET0 = 1;                    //¿ªÆô¶¨Ê±Æ÷0ÖÐ¶Ï
+ 121   1          ES = 1;                                     //¿ªÆô´®¿Ú1ÖÐ¶Ï
+ 122   1          IE2 |= ES2, IE2 &= ~ET2;    //¿ªÆô´®¿Ú2ÖÐ¶Ï,¹Ø±Õ¶¨Ê±Æ÷2ÖÐ¶Ï
+ 123   1          /*IE2 |= ES4, */IE2 &= ~ET4;        //¿ªÆô´®¿Ú4ÖÐ¶Ï,¹Ø±Õ¶¨Ê±Æ÷4ÖÐ¶Ï
+ 124   1              
+ 125   1          PT0 = 0, IPH |= PT0H; //¶¨Ê±Æ÷0ÓÅÏÈ¼¶2,ÏµÍ³Ê±¼ä¾¡¿ÉÄÜ¾«È·,×î¸ßÓÅÏÈ¼¶
+ 126   1          PS = 0, IPH &= ~PSH;  //´®¿Ú1ÓÅÏÈ¼¶0
+ 127   1              IP2 |= PS2, IP2H |= PS2H;//´®¿Ú2ÓÅÏÈ¼¶3
+ 128   1      
+ 129   1          EA = 1; //¿ªÆô×ÜÖÐ¶Ï¿ª¹Ø
+ 130   1      }
+ 131          
+ 132          //------------------------------------------------------------------------------------------------//
 
-C51 COMPILER V9.59.0.0   INIT                                                              04/17/2020 16:44:00 PAGE 3   
 
 MODULE INFORMATION:   STATIC OVERLAYABLE
-   CODE SIZE        =    278    ----
-   CONSTANT SIZE    =     56    ----
+   CODE SIZE        =    309    ----
+   CONSTANT SIZE    =   ----    ----
    XDATA SIZE       =   ----    ----
    PDATA SIZE       =   ----       2
-   DATA SIZE        =   ----       8
+   DATA SIZE        =   ----      12
    IDATA SIZE       =   ----    ----
    BIT SIZE         =   ----       1
    EDATA SIZE       =   ----    ----

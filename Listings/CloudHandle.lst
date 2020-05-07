@@ -1,11 +1,11 @@
-C51 COMPILER V9.59.0.0   CLOUDHANDLE                                                       04/17/2020 17:26:50 PAGE 1   
+C51 COMPILER V9.59.0.0   CLOUDHANDLE                                                       05/06/2020 16:02:26 PAGE 1   
 
 
 C51 COMPILER V9.59.0.0, COMPILATION OF MODULE CLOUDHANDLE
 OBJECT MODULE PLACED IN .\Objects\CloudHandle.obj
 COMPILER INVOKED BY: C:\Keil_v5\C51\BIN\C51.EXE Code\AlibabaCloud\CloudHandle.c OMF2 OPTIMIZE(9,SPEED) BROWSE MODP2 INCD
                     -IR(.\Code\Basic\def;.\Code\Basic\delay;.\Code\Basic\init;.\Code\Basic\uart;.\Code\Sensor\DS18B20;.\Code\Sensor\LCD1602;.
-                    -\Code\AlibabaCloud) DEBUG PRINT(.\Listings\CloudHandle.lst) OBJECT(.\Objects\CloudHandle.obj)
+                    -\Code\AlibabaCloud;.\Code\Sensor\GY_25) DEBUG PRINT(.\Listings\CloudHandle.lst) OBJECT(.\Objects\CloudHandle.obj)
 
 line level    source
 
@@ -35,654 +35,790 @@ line level    source
   24   1              if(CloudAct.DisConectWiFi==false)//WiFiÊÇ·ñÎª¿ÉÓÃ×´Ì¬
   25   1              {
   26   2                      CloudReceive(); //##½ÓÊÕ²¢´¦Àí´®¿Ú»º³åÇøÊý¾Ý
-  27   2                      CloudReSend(6); //##µÈ´ý»Ø¸´600ms³¬Ê±,ÖØÐÂ·¢ËÍÃüÁî,´Ó´ËÍùÏÂ¶¼ÓÐ¿ÉÄÜ´¦ÓÚWiFi¶Ï¿ªÁ¬½ÓµÄ×´Ì¬
+  27   2                      CloudReSend(6); //##µÈ´ý»Ø¸´600ms³¬Ê±,ÖØÐÂ·¢ËÍÃüÁî
   28   2                      //------#»ã±¨ÊÂ¼þ------//
-  29   2                      if (CloudAct.NeedReport_Event_1 == true && CloudReport(1) == 0)
+  29   2                      if (CloudAct.NeedReport_Event_1 == true && CloudReport(1) == EXIT_SUCCESS)
   30   2                              CloudAct.NeedReport_Event_1 = false;
-  31   2                      if (CloudAct.NeedReport_Event_2 == true && CloudReport(2) == 0)
+  31   2                      if (CloudAct.NeedReport_Event_2 == true && CloudReport(2) == EXIT_SUCCESS)
   32   2                              CloudAct.NeedReport_Event_2 = false;
   33   2                      //------#»ã±¨²ÎÊý------//
-  34   2                      if (CloudAct.NeedReport == true && CloudReport(0) == 0)
-  35   2                              CloudAct.NeedReport = false;
+  34   2                      if (CloudAct.NeedReport == true && CloudReport(0) == EXIT_SUCCESS)
+  35   2                              CloudAct.NeedReport = false,memset(&CloudAct.NeedReportT,0,sizeof(CloudAct.NeedReportT));
   36   2                      //------#Ó¦´ð·þÎñ------//
-  37   2                      if (CloudAct.NeedReport_Service1 == true && CloudReport(200) == 0)
+  37   2                      if (CloudAct.NeedReport_Service1 == true && CloudReport(200) == EXIT_SUCCESS)
   38   2                              CloudAct.NeedReport_Service1 = false;
-  39   2              }
-  40   1              //--------------------------------×ÓÉè±¸ÀàÈÎÎñ---------------------------------//
-  41   1              //------DS18B20#¿ªÊ¼×ª»»ÎÂ¶È&¶ÁÈ¡ÎÂ¶ÈÖµ------//
-  42   1          if (CloudAct.NeedReadDS18B20 == true && CloudAct.SysTime - CloudAct.NeedReadDS18B20_Ms >= DS18B20Conve
-             -rtTMaxTime[DS18B20ST.ResolutionMode] && DS18B20GetTemperature() == EXIT_SUCCESS) //³É¹¦Ö´ÐÐ¶ÁÈ¡ÎÂ¶ÈÖµ
-  43   1              CloudAct.NeedReadDS18B20 = false, CloudAct.NeedReadDS18B20_Ms = CloudAct.SysTime;
-  44   1          if (CloudAct.NeedReadDS18B20 == false && CloudAct.SysTime - CloudAct.NeedReadDS18B20_Ms >= DS18B20Need
-             -ReadMs && DS18B20ConvertTemperature() == EXIT_SUCCESS) //ÐèÒª¶ÁÈ¡DS18B20ÎÂ¶ÈÖµ,ÇÒÎÂ¶È×ª»»Ö¸Áî³É¹¦
-  45   1              CloudAct.NeedReadDS18B20 = true, CloudAct.NeedReadDS18B20_Ms = CloudAct.SysTime;
-  46   1      }
-  47          void CloudInit(void) //³õÊ¼»¯Cloud
-  48          {
-  49   1          memset(&CloudAct, 0, sizeof(CloudAct));                //ÇåÁãÈÎÎñÖ¸Ê¾Æ÷
-  50   1          CloudSendDataIdx = CloudSendIdx = CloudReceiveIdx = 0; //¸÷»º³åÇøÏÂ±êÇåÁã
-  51   1      //------------------------------------------------//
-C51 COMPILER V9.59.0.0   CLOUDHANDLE                                                       04/17/2020 17:26:50 PAGE 2   
+  39   2                      if (CloudAct.NeedReport_Service2 == true && CloudReport(201) == EXIT_SUCCESS)
+  40   2                              CloudAct.NeedReport_Service2 = false;
+  41   2                      if (CloudAct.NeedReport_Service3 == true && CloudReport(202) == EXIT_SUCCESS)
+  42   2                              CloudAct.NeedReport_Service3 = false;
+  43   2              }
+  44   1              //--------------------------------Ö´ÐÐ·þÎñÀàÈÎÎñ-------------------------------//
+  45   1              if(CloudAct.ServiceMCUOffline == true||CloudAct.ServiceMCURst == true)
+  46   1              {
+  47   2                      static bool issend = false;
+  48   2                      if(CloudAct.NeedAns==false && issend == false)//*²»ÔÚµÈ´ýÓ¦´ð×´Ì¬*,ÇÒÖ´ÐÐÒ»´Î
+  49   2                      {
+  50   3                              CloudAct.Cmd = AT_MQTTCLOSE;
+  51   3                              if(CloudSend(2)==EXIT_SUCCESS)
+  52   3                                      issend = true;
+  53   3                      }
+C51 COMPILER V9.59.0.0   CLOUDHANDLE                                                       05/06/2020 16:02:26 PAGE 2   
 
-  52   1          CloudAct.Cmd = AT_REBOOT; //ÖØÆôÄ£×é
-  53   1          CloudSend(2);
-  54   1          while (CloudAct.NeedAns == true)
-  55   1          {
-  56   2              CloudReceive();
-  57   2                      CloudReSend(20);//2,000msµÈ´ý
-  58   2                      if(CloudAct.NeedAns_FailCount==1)//CloudReSend·ÅÆú·¢ËÍ
-  59   2                      {
-  60   3                              CloudAct.DisConectWiFi=true;//³õÊ¼»¯Ê§°Ü,·ÅÆúÁ¬½ÓWiFiÄ£×é,×ªÎª±¾µØ¹¤×÷Ä£Ê½
-  61   3      #if LOGRANK_UART1 >= 2
-  62   3          printf("LOG#:CloudInit ##[Fail]##\r\n"); //ÈÕÖ¾¼ÇÂ¼Cloud³õÊ¼»¯Ê§°Ü
-  63   3      #endif
-  64   3                              return;
-  65   3                      }
-  66   2          }
-  67   1      #if LOGRANK_UART1 >= 2
-  68   1          printf("LOG#:CloudInit-Reboot ok\r\n"); //ÈÕÖ¾¼ÇÂ¼Ä£¿éÖØÆôÍê±Ï
-  69   1      #endif
-  70   1      //------------------------------------------------//
-  71   1          CloudAct.Cmd = AT_WJAPQ; //¶Ï¿ªµ±Ç°WiFiÁ¬½Ó
-  72   1          CloudSend(2);
-  73   1          while (CloudAct.NeedAns == true)
-  74   1          {
-  75   2              CloudReceive();
-  76   2                      CloudReSend(30);//3,000msµÈ´ý
-  77   2                      if(CloudAct.NeedAns_FailCount==1)//CloudReSend·ÅÆú·¢ËÍ
-  78   2                      {
-  79   3                              CloudAct.DisConectWiFi=true;//³õÊ¼»¯Ê§°Ü,·ÅÆúÁ¬½ÓWiFiÄ£×é,×ªÎª±¾µØ¹¤×÷Ä£Ê½
-  80   3      #if LOGRANK_UART1 >= 2
-  81   3          printf("LOG#:CloudInit ##[Fail]##\r\n"); //ÈÕÖ¾¼ÇÂ¼Cloud³õÊ¼»¯Ê§°Ü
-  82   3      #endif
-  83   3                              return;
-  84   3                      }
-  85   2          }
-  86   1      #if LOGRANK_UART1 >= 2
-  87   1          printf("LOG#:CloudInit-WiFiDisConect ok\r\n"); //ÈÕÖ¾¼ÇÂ¼Ä£¿é¶Ï¿ªµ±Ç°WiFiÁ¬½Ó
-  88   1      #endif
-  89   1      //------------------------------------------------//
-  90   1          CloudAct.Cmd = AT_WJAP; //Á¬½ÓÄ¿±êWiFi
-  91   1          CloudSend(0);
-  92   1          while (CloudAct.NeedAns == true)
-  93   1          {
-  94   2              CloudReceive();
-  95   2                      CloudReSend(150);//15,000msµÈ´ý
-  96   2                      if(CloudAct.NeedAns_FailCount==1)//CloudReSend·ÅÆú·¢ËÍ
-  97   2                      {
-  98   3                              CloudAct.DisConectWiFi=true;//³õÊ¼»¯Ê§°Ü,·ÅÆúÁ¬½ÓWiFiÄ£×é,×ªÎª±¾µØ¹¤×÷Ä£Ê½
-  99   3      #if LOGRANK_UART1 >= 2
- 100   3          printf("LOG#:CloudInit ##[Fail]##\r\n"); //ÈÕÖ¾¼ÇÂ¼Cloud³õÊ¼»¯Ê§°Ü
- 101   3      #endif
- 102   3                              return;
- 103   3                      }
- 104   2          }
- 105   1      #if LOGRANK_UART1 >= 2
- 106   1          printf("LOG#:CloudInit-WiFiConect ok\r\n"); //ÈÕÖ¾¼ÇÂ¼Ä¿±êWiFiÒÑÁ¬½Ó
- 107   1      #endif
- 108   1      //------------------------------------------------//
- 109   1          CloudAct.Cmd = AT_MQTTAUTH; //ÉèÖÃMQTTÓÃ»§ÃûÃÜÂë
- 110   1          CloudSend(0);
- 111   1          while (CloudAct.NeedAns == true)
- 112   1          {
- 113   2              CloudReceive();
-C51 COMPILER V9.59.0.0   CLOUDHANDLE                                                       04/17/2020 17:26:50 PAGE 3   
+  54   2                      if(CloudAct.DisConectWiFi == true)//ÒÑÀëÏß
+  55   2                      {
+  56   3                              CloudAct.ServiceMCUOffline=false;//Íê³ÉMCUÀëÏßÈÎÎñ
+  57   3                              if(CloudAct.ServiceMCURst == true)//Ö´ÐÐÖØÆôMCUÈÎÎñ
+  58   3                              {
+  59   4      #if LOGRANK_UART1 >= 2
+                      printf("LOG#:CloudLoop Service:MCURST!\r\n"); //ÈÕÖ¾¼ÇÂ¼½«»áÖØÆôMCU
+              #endif
+  62   4                                      MCURST();
+  63   4                              }
+  64   3                      }
+  65   2              }
+  66   1              //--------------------------------×ÓÉè±¸ÀàÈÎÎñ---------------------------------//
+  67   1              //------´«¸ÐÆ÷¶ÁÊý------//
+  68   1          if (CloudAct.NeedReadDS18B20 == true 
+  69   1                      && CloudAct.SysTime - CloudAct.NeedReadDS18B20_Ms >= DS18B20ConvertTMaxTime[DS18B20ST.ResolutionMode]
+  70   1                      && DS18B20GetTemperature() == EXIT_SUCCESS)//ÐèÒª¶ÁÈ¡DS18B20ÎÂ¶ÈÖµ
+  71   1                      CloudAct.NeedReadDS18B20 = false,CloudAct.NeedReadDS18B20_Ms = CloudAct.SysTime;
+  72   1              if(CloudAct.NeedReadGY_25 == true && GY_25GetAzimuth() == EXIT_SUCCESS)//ÒÑ·¢ËÍ²éÑ¯Ö¸Áî,¿ªÊ¼¶ÁÈ¡·½Î»½ÇÊý¾
+             -Ý
+  73   1                      CloudAct.NeedReadGY_25 = false, CloudAct.NeedReadGY_25_Ms = CloudAct.SysTime;//¶ÁÈ¡³É¹¦
+  74   1              //------´«¸ÐÆ÷×¼±¸------//
+  75   1          if (CloudAct.NeedReadDS18B20 == false && CloudAct.SysTime - CloudAct.NeedReadDS18B20_Ms >= DS18B20Need
+             -ReadMs 
+  76   1                      && DS18B20ConvertTemperature() == EXIT_SUCCESS) //ÐèÒª¿ªÊ¼ÎÂ¶È×ª»»
+  77   1              CloudAct.NeedReadDS18B20 = true, CloudAct.NeedReadDS18B20_Ms = CloudAct.SysTime;
+  78   1              if(CloudAct.NeedReadGY_25 == false && CloudAct.SysTime - CloudAct.NeedReadGY_25_Ms >= GY_25NeedReadMs 
+  79   1                      && GY_25SetCmd(GY_25Query) == EXIT_SUCCESS)//·¢ËÍ²éÑ¯Ö¸Áî
+  80   1                      CloudAct.NeedReadGY_25 = true;
+  81   1      }
+  82          void CloudInit(void) //³õÊ¼»¯Cloud
+  83          {
+  84   1          memset(&CloudAct, 0, sizeof(CloudAct));                //ÇåÁãÈÎÎñÖ¸Ê¾Æ÷
+  85   1          CloudSendDataIdx = CloudSendIdx = CloudReceiveIdx = 0; //¸÷»º³åÇøÏÂ±êÇåÁã
+  86   1      //------------------------------------------------//
+  87   1          CloudAct.Cmd = AT_REBOOT; //ÖØÆôÄ£×é
+  88   1          CloudSend(2);
+  89   1          while (CloudAct.NeedAns == true)
+  90   1          {
+  91   2              CloudReceive();
+  92   2                      CloudReSend(20);//2,000msµÈ´ý
+  93   2                      if(CloudAct.NeedAns_FailCount==1)//CloudReSend·ÅÆú·¢ËÍ
+  94   2                      {
+  95   3                              CloudAct.DisConectWiFi=true;//³õÊ¼»¯Ê§°Ü,·ÅÆúÁ¬½ÓWiFiÄ£×é,×ªÎª±¾µØ¹¤×÷Ä£Ê½
+  96   3      #if LOGRANK_UART1 >= 2
+                  printf("LOG#:CloudInit ##[Fail]##\r\n"); //ÈÕÖ¾¼ÇÂ¼Cloud³õÊ¼»¯Ê§°Ü
+              #endif
+  99   3                              return;
+ 100   3                      }
+ 101   2          }
+ 102   1      #if LOGRANK_UART1 >= 2
+                  printf("LOG#:CloudInit-Reboot ok\r\n"); //ÈÕÖ¾¼ÇÂ¼Ä£¿éÖØÆôÍê±Ï
+              #endif
+ 105   1      //------------------------------------------------//
+ 106   1          CloudAct.Cmd = AT_WJAPQ; //¶Ï¿ªµ±Ç°WiFiÁ¬½Ó
+ 107   1          CloudSend(2);
+ 108   1          while (CloudAct.NeedAns == true)
+ 109   1          {
+ 110   2              CloudReceive();
+ 111   2                      CloudReSend(30);//3,000msµÈ´ý
+ 112   2                      if(CloudAct.NeedAns_FailCount==1)//CloudReSend·ÅÆú·¢ËÍ
+ 113   2                      {
+C51 COMPILER V9.59.0.0   CLOUDHANDLE                                                       05/06/2020 16:02:26 PAGE 3   
 
- 114   2                      CloudReSend(22);//2,200msµÈ´ý
- 115   2                      if(CloudAct.NeedAns_FailCount==1)//CloudReSend·ÅÆú·¢ËÍ
- 116   2                      {
- 117   3                              CloudAct.DisConectWiFi=true;//³õÊ¼»¯Ê§°Ü,·ÅÆúÁ¬½ÓWiFiÄ£×é,×ªÎª±¾µØ¹¤×÷Ä£Ê½
- 118   3      #if LOGRANK_UART1 >= 2
- 119   3          printf("LOG#:CloudInit ##[Fail]##\r\n"); //ÈÕÖ¾¼ÇÂ¼Cloud³õÊ¼»¯Ê§°Ü
- 120   3      #endif
- 121   3                              return;
- 122   3                      }
- 123   2          }
- 124   1      #if LOGRANK_UART1 >= 2
- 125   1          printf("LOG#:CloudInit-MQTT_UserSet ok\r\n"); //ÈÕÖ¾¼ÇÂ¼MQTTÓÃ»§ÃûºÍÃÜÂëÉèÖÃÍê±Ï
- 126   1      #endif
- 127   1      //------------------------------------------------//
- 128   1          CloudAct.Cmd = AT_MQTTSOCK; //ÉèÖÃMQTTÖ÷»úºÍ¶Ë¿Ú
- 129   1          CloudSend(0);
- 130   1          while (CloudAct.NeedAns == true)
- 131   1          {
- 132   2              CloudReceive();
- 133   2                      CloudReSend(22);//2,200msµÈ´ý
- 134   2                      if(CloudAct.NeedAns_FailCount==1)//CloudReSend·ÅÆú·¢ËÍ
- 135   2                      {
- 136   3                              CloudAct.DisConectWiFi=true;//³õÊ¼»¯Ê§°Ü,·ÅÆúÁ¬½ÓWiFiÄ£×é,×ªÎª±¾µØ¹¤×÷Ä£Ê½
- 137   3      #if LOGRANK_UART1 >= 2
- 138   3          printf("LOG#:CloudInit ##[Fail]##\r\n"); //ÈÕÖ¾¼ÇÂ¼Cloud³õÊ¼»¯Ê§°Ü
- 139   3      #endif
- 140   3                              return;
- 141   3                      }
- 142   2          }
- 143   1      #if LOGRANK_UART1 >= 2
- 144   1          printf("LOG#:CloudInit-MQTT_HostSet ok\r\n"); //ÈÕÖ¾¼ÇÂ¼MQTTÖ÷»úºÍ¶Ë¿ÚÉèÖÃÍê±Ï
- 145   1      #endif
- 146   1      //------------------------------------------------//
- 147   1          CloudAct.Cmd = AT_MQTTCID; //ÉèÖÃMQTT¿Í»§¶ËID
- 148   1          CloudSend(0);
- 149   1          while (CloudAct.NeedAns == true)
- 150   1          {
- 151   2              CloudReceive();
- 152   2                      CloudReSend(22);//2,200msµÈ´ý
- 153   2                      if(CloudAct.NeedAns_FailCount==1)//CloudReSend·ÅÆú·¢ËÍ
- 154   2                      {
- 155   3                              CloudAct.DisConectWiFi=true;//³õÊ¼»¯Ê§°Ü,·ÅÆúÁ¬½ÓWiFiÄ£×é,×ªÎª±¾µØ¹¤×÷Ä£Ê½
- 156   3      #if LOGRANK_UART1 >= 2
- 157   3          printf("LOG#:CloudInit ##[Fail]##\r\n"); //ÈÕÖ¾¼ÇÂ¼Cloud³õÊ¼»¯Ê§°Ü
- 158   3      #endif
- 159   3                              return;
- 160   3                      }
- 161   2          }
- 162   1      #if LOGRANK_UART1 >= 2
- 163   1          printf("LOG#:CloudInit-MQTT_ClintIDSet ok\r\n"); //ÈÕÖ¾¼ÇÂ¼MQTT¿Í»§¶ËIDÉèÖÃÍê±Ï
- 164   1      #endif
- 165   1      //------------------------------------------------//
- 166   1          CloudAct.Cmd = AT_MQTTKEEPALIVE; //ÉèÖÃMQTTÐÄÌøÖÜÆÚ
- 167   1          CloudSend(0);
- 168   1          while (CloudAct.NeedAns == true)
- 169   1          {
- 170   2              CloudReceive();
- 171   2                      CloudReSend(22);//2,200msµÈ´ý
- 172   2                      if(CloudAct.NeedAns_FailCount==1)//CloudReSend·ÅÆú·¢ËÍ
- 173   2                      {
- 174   3                              CloudAct.DisConectWiFi=true;//³õÊ¼»¯Ê§°Ü,·ÅÆúÁ¬½ÓWiFiÄ£×é,×ªÎª±¾µØ¹¤×÷Ä£Ê½
- 175   3      #if LOGRANK_UART1 >= 2
-C51 COMPILER V9.59.0.0   CLOUDHANDLE                                                       04/17/2020 17:26:50 PAGE 4   
+ 114   3                              CloudAct.DisConectWiFi=true;//³õÊ¼»¯Ê§°Ü,·ÅÆúÁ¬½ÓWiFiÄ£×é,×ªÎª±¾µØ¹¤×÷Ä£Ê½
+ 115   3      #if LOGRANK_UART1 >= 2
+                  printf("LOG#:CloudInit ##[Fail]##\r\n"); //ÈÕÖ¾¼ÇÂ¼Cloud³õÊ¼»¯Ê§°Ü
+              #endif
+ 118   3                              return;
+ 119   3                      }
+ 120   2          }
+ 121   1      #if LOGRANK_UART1 >= 2
+                  printf("LOG#:CloudInit-WiFiDisConect ok\r\n"); //ÈÕÖ¾¼ÇÂ¼Ä£¿é¶Ï¿ªµ±Ç°WiFiÁ¬½Ó
+              #endif
+ 124   1      //------------------------------------------------//
+ 125   1          CloudAct.Cmd = AT_WJAP; //Á¬½ÓÄ¿±êWiFi
+ 126   1          CloudSend(0);
+ 127   1          while (CloudAct.NeedAns == true)
+ 128   1          {
+ 129   2              CloudReceive();
+ 130   2                      CloudReSend(150);//15,000msµÈ´ý
+ 131   2                      if(CloudAct.NeedAns_FailCount==1)//CloudReSend·ÅÆú·¢ËÍ
+ 132   2                      {
+ 133   3                              CloudAct.DisConectWiFi=true;//³õÊ¼»¯Ê§°Ü,·ÅÆúÁ¬½ÓWiFiÄ£×é,×ªÎª±¾µØ¹¤×÷Ä£Ê½
+ 134   3      #if LOGRANK_UART1 >= 2
+                  printf("LOG#:CloudInit ##[Fail]##\r\n"); //ÈÕÖ¾¼ÇÂ¼Cloud³õÊ¼»¯Ê§°Ü
+              #endif
+ 137   3                              return;
+ 138   3                      }
+ 139   2          }
+ 140   1      #if LOGRANK_UART1 >= 2
+                  printf("LOG#:CloudInit-WiFiConect ok\r\n"); //ÈÕÖ¾¼ÇÂ¼Ä¿±êWiFiÒÑÁ¬½Ó
+              #endif
+ 143   1      //------------------------------------------------//
+ 144   1          CloudAct.Cmd = AT_MQTTAUTH; //ÉèÖÃMQTTÓÃ»§ÃûÃÜÂë
+ 145   1          CloudSend(0);
+ 146   1          while (CloudAct.NeedAns == true)
+ 147   1          {
+ 148   2              CloudReceive();
+ 149   2                      CloudReSend(22);//2,200msµÈ´ý
+ 150   2                      if(CloudAct.NeedAns_FailCount==1)//CloudReSend·ÅÆú·¢ËÍ
+ 151   2                      {
+ 152   3                              CloudAct.DisConectWiFi=true;//³õÊ¼»¯Ê§°Ü,·ÅÆúÁ¬½ÓWiFiÄ£×é,×ªÎª±¾µØ¹¤×÷Ä£Ê½
+ 153   3      #if LOGRANK_UART1 >= 2
+                  printf("LOG#:CloudInit ##[Fail]##\r\n"); //ÈÕÖ¾¼ÇÂ¼Cloud³õÊ¼»¯Ê§°Ü
+              #endif
+ 156   3                              return;
+ 157   3                      }
+ 158   2          }
+ 159   1      #if LOGRANK_UART1 >= 2
+                  printf("LOG#:CloudInit-MQTT_UserSet ok\r\n"); //ÈÕÖ¾¼ÇÂ¼MQTTÓÃ»§ÃûºÍÃÜÂëÉèÖÃÍê±Ï
+              #endif
+ 162   1      //------------------------------------------------//
+ 163   1          CloudAct.Cmd = AT_MQTTSOCK; //ÉèÖÃMQTTÖ÷»úºÍ¶Ë¿Ú
+ 164   1          CloudSend(0);
+ 165   1          while (CloudAct.NeedAns == true)
+ 166   1          {
+ 167   2              CloudReceive();
+ 168   2                      CloudReSend(22);//2,200msµÈ´ý
+ 169   2                      if(CloudAct.NeedAns_FailCount==1)//CloudReSend·ÅÆú·¢ËÍ
+ 170   2                      {
+ 171   3                              CloudAct.DisConectWiFi=true;//³õÊ¼»¯Ê§°Ü,·ÅÆúÁ¬½ÓWiFiÄ£×é,×ªÎª±¾µØ¹¤×÷Ä£Ê½
+ 172   3      #if LOGRANK_UART1 >= 2
+                  printf("LOG#:CloudInit ##[Fail]##\r\n"); //ÈÕÖ¾¼ÇÂ¼Cloud³õÊ¼»¯Ê§°Ü
+              #endif
+ 175   3                              return;
+C51 COMPILER V9.59.0.0   CLOUDHANDLE                                                       05/06/2020 16:02:26 PAGE 4   
 
- 176   3          printf("LOG#:CloudInit ##[Fail]##\r\n"); //ÈÕÖ¾¼ÇÂ¼Cloud³õÊ¼»¯Ê§°Ü
- 177   3      #endif
- 178   3                              return;
- 179   3                      }
- 180   2          }
- 181   1      #if LOGRANK_UART1 >= 2
- 182   1          printf("LOG#:CloudInit-MQTT_HeartSet ok\r\n"); //ÈÕÖ¾¼ÇÂ¼MQTTÐÄÌøÊ±¼äÉèÖÃÍê±Ï
- 183   1      #endif
- 184   1      //------------------------------------------------//
- 185   1          CloudAct.Cmd = AT_MQTTRECONN; //ÉèÖÃMQTTÊÇ·ñ×Ô¶¯ÖØÁ¬
- 186   1          CloudSend(0);
- 187   1          while (CloudAct.NeedAns == true)
- 188   1          {
- 189   2              CloudReceive();
- 190   2                      CloudReSend(22);//2,200msµÈ´ý
- 191   2                      if(CloudAct.NeedAns_FailCount==1)//CloudReSend·ÅÆú·¢ËÍ
- 192   2                      {
- 193   3                              CloudAct.DisConectWiFi=true;//³õÊ¼»¯Ê§°Ü,·ÅÆúÁ¬½ÓWiFiÄ£×é,×ªÎª±¾µØ¹¤×÷Ä£Ê½
- 194   3      #if LOGRANK_UART1 >= 2
- 195   3          printf("LOG#:CloudInit ##[Fail]##\r\n"); //ÈÕÖ¾¼ÇÂ¼Cloud³õÊ¼»¯Ê§°Ü
- 196   3      #endif
- 197   3                              return;
- 198   3                      }
- 199   2          }
- 200   1      #if LOGRANK_UART1 >= 2
- 201   1          printf("LOG#:CloudInit-MQTT_AutoReConect Set ok\r\n"); //ÈÕÖ¾¼ÇÂ¼MQTT×Ô¶¯ÖØÁ¬ÉèÖÃÍê±Ï
- 202   1      #endif
- 203   1      //------------------------------------------------//
- 204   1          CloudAct.Cmd = AT_MQTTAUTOSTART; //ÉèÖÃMQTTÊÇ·ñÉÏµç×Ô¶¯¿ªÆô
- 205   1          CloudSend(0);
- 206   1          while (CloudAct.NeedAns == true)
- 207   1          {
- 208   2              CloudReceive();
- 209   2                      CloudReSend(22);//2,200msµÈ´ý
- 210   2                      if(CloudAct.NeedAns_FailCount==1)//CloudReSend·ÅÆú·¢ËÍ
- 211   2                      {
- 212   3                              CloudAct.DisConectWiFi=true;//³õÊ¼»¯Ê§°Ü,·ÅÆúÁ¬½ÓWiFiÄ£×é,×ªÎª±¾µØ¹¤×÷Ä£Ê½
- 213   3      #if LOGRANK_UART1 >= 2
- 214   3          printf("LOG#:CloudInit ##[Fail]##\r\n"); //ÈÕÖ¾¼ÇÂ¼Cloud³õÊ¼»¯Ê§°Ü
- 215   3      #endif
- 216   3                              return;
- 217   3                      }
- 218   2          }
- 219   1      #if LOGRANK_UART1 >= 2
- 220   1          printf("LOG#:CloudInit-MQTT_AutoStartSet ok\r\n"); //ÈÕÖ¾¼ÇÂ¼MQTTÉÏµç×Ô¶¯¿ªÆôÉèÖÃÍê±Ï
- 221   1      #endif
- 222   1      //------------------------------------------------//
- 223   1          CloudAct.Cmd = AT_MQTTSTART; //¿ªÆôMQTT
- 224   1          CloudSend(2);
- 225   1          while (CloudAct.NeedAns == true)
- 226   1          {
- 227   2              CloudReceive();
- 228   2                      CloudReSend(40);//4,000msµÈ´ý
- 229   2                      if(CloudAct.NeedAns_FailCount==1)//CloudReSend·ÅÆú·¢ËÍ
- 230   2                      {
- 231   3                              CloudAct.DisConectWiFi=true;//³õÊ¼»¯Ê§°Ü,·ÅÆúÁ¬½ÓWiFiÄ£×é,×ªÎª±¾µØ¹¤×÷Ä£Ê½
- 232   3      #if LOGRANK_UART1 >= 2
- 233   3          printf("LOG#:CloudInit ##[Fail]##\r\n"); //ÈÕÖ¾¼ÇÂ¼Cloud³õÊ¼»¯Ê§°Ü
- 234   3      #endif
- 235   3                              return;
- 236   3                      }
- 237   2          }
-C51 COMPILER V9.59.0.0   CLOUDHANDLE                                                       04/17/2020 17:26:50 PAGE 5   
+ 176   3                      }
+ 177   2          }
+ 178   1      #if LOGRANK_UART1 >= 2
+                  printf("LOG#:CloudInit-MQTT_HostSet ok\r\n"); //ÈÕÖ¾¼ÇÂ¼MQTTÖ÷»úºÍ¶Ë¿ÚÉèÖÃÍê±Ï
+              #endif
+ 181   1      //------------------------------------------------//
+ 182   1          CloudAct.Cmd = AT_MQTTCID; //ÉèÖÃMQTT¿Í»§¶ËID
+ 183   1          CloudSend(0);
+ 184   1          while (CloudAct.NeedAns == true)
+ 185   1          {
+ 186   2              CloudReceive();
+ 187   2                      CloudReSend(22);//2,200msµÈ´ý
+ 188   2                      if(CloudAct.NeedAns_FailCount==1)//CloudReSend·ÅÆú·¢ËÍ
+ 189   2                      {
+ 190   3                              CloudAct.DisConectWiFi=true;//³õÊ¼»¯Ê§°Ü,·ÅÆúÁ¬½ÓWiFiÄ£×é,×ªÎª±¾µØ¹¤×÷Ä£Ê½
+ 191   3      #if LOGRANK_UART1 >= 2
+                  printf("LOG#:CloudInit ##[Fail]##\r\n"); //ÈÕÖ¾¼ÇÂ¼Cloud³õÊ¼»¯Ê§°Ü
+              #endif
+ 194   3                              return;
+ 195   3                      }
+ 196   2          }
+ 197   1      #if LOGRANK_UART1 >= 2
+                  printf("LOG#:CloudInit-MQTT_ClintIDSet ok\r\n"); //ÈÕÖ¾¼ÇÂ¼MQTT¿Í»§¶ËIDÉèÖÃÍê±Ï
+              #endif
+ 200   1      //------------------------------------------------//
+ 201   1          CloudAct.Cmd = AT_MQTTKEEPALIVE; //ÉèÖÃMQTTÐÄÌøÖÜÆÚ
+ 202   1          CloudSend(0);
+ 203   1          while (CloudAct.NeedAns == true)
+ 204   1          {
+ 205   2              CloudReceive();
+ 206   2                      CloudReSend(22);//2,200msµÈ´ý
+ 207   2                      if(CloudAct.NeedAns_FailCount==1)//CloudReSend·ÅÆú·¢ËÍ
+ 208   2                      {
+ 209   3                              CloudAct.DisConectWiFi=true;//³õÊ¼»¯Ê§°Ü,·ÅÆúÁ¬½ÓWiFiÄ£×é,×ªÎª±¾µØ¹¤×÷Ä£Ê½
+ 210   3      #if LOGRANK_UART1 >= 2
+                  printf("LOG#:CloudInit ##[Fail]##\r\n"); //ÈÕÖ¾¼ÇÂ¼Cloud³õÊ¼»¯Ê§°Ü
+              #endif
+ 213   3                              return;
+ 214   3                      }
+ 215   2          }
+ 216   1      #if LOGRANK_UART1 >= 2
+                  printf("LOG#:CloudInit-MQTT_HeartSet ok\r\n"); //ÈÕÖ¾¼ÇÂ¼MQTTÐÄÌøÊ±¼äÉèÖÃÍê±Ï
+              #endif
+ 219   1      //------------------------------------------------//
+ 220   1          CloudAct.Cmd = AT_MQTTRECONN; //ÉèÖÃMQTTÊÇ·ñ×Ô¶¯ÖØÁ¬
+ 221   1          CloudSend(0);
+ 222   1          while (CloudAct.NeedAns == true)
+ 223   1          {
+ 224   2              CloudReceive();
+ 225   2                      CloudReSend(22);//2,200msµÈ´ý
+ 226   2                      if(CloudAct.NeedAns_FailCount==1)//CloudReSend·ÅÆú·¢ËÍ
+ 227   2                      {
+ 228   3                              CloudAct.DisConectWiFi=true;//³õÊ¼»¯Ê§°Ü,·ÅÆúÁ¬½ÓWiFiÄ£×é,×ªÎª±¾µØ¹¤×÷Ä£Ê½
+ 229   3      #if LOGRANK_UART1 >= 2
+                  printf("LOG#:CloudInit ##[Fail]##\r\n"); //ÈÕÖ¾¼ÇÂ¼Cloud³õÊ¼»¯Ê§°Ü
+              #endif
+ 232   3                              return;
+ 233   3                      }
+ 234   2          }
+ 235   1      #if LOGRANK_UART1 >= 2
+                  printf("LOG#:CloudInit-MQTT_AutoReConect Set ok\r\n"); //ÈÕÖ¾¼ÇÂ¼MQTT×Ô¶¯ÖØÁ¬ÉèÖÃÍê±Ï
+              #endif
+C51 COMPILER V9.59.0.0   CLOUDHANDLE                                                       05/06/2020 16:02:26 PAGE 5   
 
- 238   1      #if LOGRANK_UART1 >= 2
- 239   1          printf("LOG#:CloudInit-MQTT_Start ok\r\n"); //ÈÕÖ¾¼ÇÂ¼MQTT¿ªÆô³É¹¦
- 240   1      #endif
- 241   1      //------------------------------------------------//
- 242   1          CloudAct.Cmd = AT_MQTTSUB; //ÉèÖÃMQTT¶©ÔÄ-·þÎñ1,SubCode=2
- 243   1          CloudAct.SubCode = 2;
- 244   1          CloudSend(0);
- 245   1          while (CloudAct.NeedAns == true)
- 246   1          {
- 247   2              CloudReceive();
- 248   2                      CloudReSend(22);//2,200msµÈ´ý
- 249   2                      if(CloudAct.NeedAns_FailCount==1)//CloudReSend·ÅÆú·¢ËÍ
- 250   2                      {
- 251   3                              CloudAct.DisConectWiFi=true;//³õÊ¼»¯Ê§°Ü,·ÅÆúÁ¬½ÓWiFiÄ£×é,×ªÎª±¾µØ¹¤×÷Ä£Ê½
- 252   3      #if LOGRANK_UART1 >= 2
- 253   3          printf("LOG#:CloudInit ##[Fail]##\r\n"); //ÈÕÖ¾¼ÇÂ¼Cloud³õÊ¼»¯Ê§°Ü
- 254   3      #endif
- 255   3                              return;
- 256   3                      }
- 257   2          }
- 258   1              CloudAct.SubisBusy|=0x04;       //2ºÅSubÍ¨µÀÒÑÕ¼ÓÃ
- 259   1      #if LOGRANK_UART1 >= 2
- 260   1          printf("LOG#:CloudInit-MQTT_SUB_Service1 ok\r\n"); //ÈÕÖ¾¼ÇÂ¼MQTT¶©ÔÄ·þÎñ1³É¹¦
- 261   1      #endif
- 262   1      //------------------------------------------------//
- 263   1          CloudAct.Cmd = AT_MQTTPUB; //ÉèÖÃMQTT·¢²¼-Ä¬ÈÏÎª²ÎÊý·¢²¼PubCode=0
- 264   1          CloudAct.PubCode_t = 0;
- 265   1          CloudSend(0);
- 266   1          while (CloudAct.NeedAns == true)
- 267   1          {
- 268   2              CloudReceive();
- 269   2                      CloudReSend(22);//2,200msµÈ´ý
- 270   2                      if(CloudAct.NeedAns_FailCount==1)//CloudReSend·ÅÆú·¢ËÍ
- 271   2                      {
- 272   3                              CloudAct.DisConectWiFi=true;//³õÊ¼»¯Ê§°Ü,·ÅÆúÁ¬½ÓWiFiÄ£×é,×ªÎª±¾µØ¹¤×÷Ä£Ê½
- 273   3      #if LOGRANK_UART1 >= 2
- 274   3          printf("LOG#:CloudInit ##[Fail]##\r\n"); //ÈÕÖ¾¼ÇÂ¼Cloud³õÊ¼»¯Ê§°Ü
- 275   3      #endif
- 276   3                              return;
- 277   3                      }
- 278   2          }
- 279   1          //------------------------------------------------//
- 280   1      #if LOGRANK_UART1 >= 2
- 281   1          printf("LOG#:CloudInit ok\r\n"); //ÈÕÖ¾¼ÇÂ¼Cloud³õÊ¼»¯Íê±Ï
- 282   1      #endif
- 283   1      }
- 284          //------------------------------------------------------------------------------------------------//
- 285          static void CloudReceive(void) //½ÓÊÕ´®¿Ú»º³åÇøÊý¾Ý
- 286          {
- 287   1          data ushort idx1 = uart2_idx1, idx2 = uart2_idx2;
- 288   1          while (idx1 != idx2)
- 289   1          {
- 290   2              switch (CloudReceiveState)
- 291   2              {
- 292   3              case 0: //µÈ´ýÖÐ
- 293   3                  if (uart2_buffer[idx1] == 0x0A)
- 294   3                      CloudReceiveState = 1; //µÈ´ý/r
- 295   3                  break;
- 296   3              case 1:                             //¶ÁÈ¡ÖÐ
- 297   3                  if (uart2_buffer[idx1] == 0x0D) //·¢ÏÖ\n,½áÊø¶ÁÈ¡,ÓÉCloudHandleReceiveº¯Êý´¦Àí
- 298   3                  {
- 299   4                      if (CloudReceiveIdx >= 2)                      //ÃüÁî¿ÕÏ¶,»Øµ½State=1;
-C51 COMPILER V9.59.0.0   CLOUDHANDLE                                                       04/17/2020 17:26:50 PAGE 6   
+ 238   1      //------------------------------------------------//
+ 239   1          CloudAct.Cmd = AT_MQTTAUTOSTART; //ÉèÖÃMQTTÊÇ·ñÉÏµç×Ô¶¯¿ªÆô
+ 240   1          CloudSend(0);
+ 241   1          while (CloudAct.NeedAns == true)
+ 242   1          {
+ 243   2              CloudReceive();
+ 244   2                      CloudReSend(22);//2,200msµÈ´ý
+ 245   2                      if(CloudAct.NeedAns_FailCount==1)//CloudReSend·ÅÆú·¢ËÍ
+ 246   2                      {
+ 247   3                              CloudAct.DisConectWiFi=true;//³õÊ¼»¯Ê§°Ü,·ÅÆúÁ¬½ÓWiFiÄ£×é,×ªÎª±¾µØ¹¤×÷Ä£Ê½
+ 248   3      #if LOGRANK_UART1 >= 2
+                  printf("LOG#:CloudInit ##[Fail]##\r\n"); //ÈÕÖ¾¼ÇÂ¼Cloud³õÊ¼»¯Ê§°Ü
+              #endif
+ 251   3                              return;
+ 252   3                      }
+ 253   2          }
+ 254   1      #if LOGRANK_UART1 >= 2
+                  printf("LOG#:CloudInit-MQTT_AutoStartSet ok\r\n"); //ÈÕÖ¾¼ÇÂ¼MQTTÉÏµç×Ô¶¯¿ªÆôÉèÖÃÍê±Ï
+              #endif
+ 257   1      //------------------------------------------------//
+ 258   1          CloudAct.Cmd = AT_MQTTSTART; //¿ªÆôMQTT
+ 259   1          CloudSend(2);
+ 260   1          while (CloudAct.NeedAns == true)
+ 261   1          {
+ 262   2              CloudReceive();
+ 263   2                      CloudReSend(40);//4,000msµÈ´ý
+ 264   2                      if(CloudAct.NeedAns_FailCount==1)//CloudReSend·ÅÆú·¢ËÍ
+ 265   2                      {
+ 266   3                              CloudAct.DisConectWiFi=true;//³õÊ¼»¯Ê§°Ü,·ÅÆúÁ¬½ÓWiFiÄ£×é,×ªÎª±¾µØ¹¤×÷Ä£Ê½
+ 267   3      #if LOGRANK_UART1 >= 2
+                  printf("LOG#:CloudInit ##[Fail]##\r\n"); //ÈÕÖ¾¼ÇÂ¼Cloud³õÊ¼»¯Ê§°Ü
+              #endif
+ 270   3                              return;
+ 271   3                      }
+ 272   2          }
+ 273   1      #if LOGRANK_UART1 >= 2
+                  printf("LOG#:CloudInit-MQTT_Start ok\r\n"); //ÈÕÖ¾¼ÇÂ¼MQTT¿ªÆô³É¹¦
+              #endif
+ 276   1      //------------------------------------------------//
+ 277   1          CloudAct.Cmd = AT_MQTTSUB; //ÉèÖÃMQTT¶©ÔÄ-·þÎñ1,SubCode=2
+ 278   1          CloudAct.SubCode = 2;
+ 279   1          CloudSend(0);
+ 280   1          while (CloudAct.NeedAns == true)
+ 281   1          {
+ 282   2              CloudReceive();
+ 283   2                      CloudReSend(22);//2,200msµÈ´ý
+ 284   2                      if(CloudAct.NeedAns_FailCount==1)//CloudReSend·ÅÆú·¢ËÍ
+ 285   2                      {
+ 286   3                              CloudAct.DisConectWiFi=true;//³õÊ¼»¯Ê§°Ü,·ÅÆúÁ¬½ÓWiFiÄ£×é,×ªÎª±¾µØ¹¤×÷Ä£Ê½
+ 287   3      #if LOGRANK_UART1 >= 2
+                  printf("LOG#:CloudInit ##[Fail]##\r\n"); //ÈÕÖ¾¼ÇÂ¼Cloud³õÊ¼»¯Ê§°Ü
+              #endif
+ 290   3                              return;
+ 291   3                      }
+ 292   2          }
+ 293   1              CloudAct.SubisBusy|=0x04;       //2ºÅSubÍ¨µÀÒÑÕ¼ÓÃ
+ 294   1      #if LOGRANK_UART1 >= 2
+                  printf("LOG#:CloudInit-MQTT_SUB_Service1 ok\r\n"); //ÈÕÖ¾¼ÇÂ¼MQTT¶©ÔÄ·þÎñ1³É¹¦
+              #endif
+ 297   1      //------------------------------------------------//
+ 298   1          CloudAct.Cmd = AT_MQTTSUB; //ÉèÖÃMQTT¶©ÔÄ-·þÎñ2,SubCode=3
+ 299   1          CloudAct.SubCode = 3;
+C51 COMPILER V9.59.0.0   CLOUDHANDLE                                                       05/06/2020 16:02:26 PAGE 6   
 
- 300   4                      {                                              //###´Ë´¦¾ö¶¨¹ýÂË³¤¶È²»×ã2µÄÃüÁî,Ö÷ÒªÕë¶ÔMQ
+ 300   1          CloudSend(0);
+ 301   1          while (CloudAct.NeedAns == true)
+ 302   1          {
+ 303   2              CloudReceive();
+ 304   2                      CloudReSend(22);//2,200msµÈ´ý
+ 305   2                      if(CloudAct.NeedAns_FailCount==1)//CloudReSend·ÅÆú·¢ËÍ
+ 306   2                      {
+ 307   3                              CloudAct.DisConectWiFi=true;//³õÊ¼»¯Ê§°Ü,·ÅÆúÁ¬½ÓWiFiÄ£×é,×ªÎª±¾µØ¹¤×÷Ä£Ê½
+ 308   3      #if LOGRANK_UART1 >= 2
+                  printf("LOG#:CloudInit ##[Fail]##\r\n"); //ÈÕÖ¾¼ÇÂ¼Cloud³õÊ¼»¯Ê§°Ü
+              #endif
+ 311   3                              return;
+ 312   3                      }
+ 313   2          }
+ 314   1              CloudAct.SubisBusy|=0x08;       //3ºÅSubÍ¨µÀÒÑÕ¼ÓÃ
+ 315   1      #if LOGRANK_UART1 >= 2
+                  printf("LOG#:CloudInit-MQTT_SUB_Service2 ok\r\n"); //ÈÕÖ¾¼ÇÂ¼MQTT¶©ÔÄ·þÎñ2³É¹¦
+              #endif
+ 318   1      //------------------------------------------------//
+ 319   1          CloudAct.Cmd = AT_MQTTSUB; //ÉèÖÃMQTT¶©ÔÄ-·þÎñ3,SubCode=4
+ 320   1          CloudAct.SubCode = 4;
+ 321   1          CloudSend(0);
+ 322   1          while (CloudAct.NeedAns == true)
+ 323   1          {
+ 324   2              CloudReceive();
+ 325   2                      CloudReSend(22);//2,200msµÈ´ý
+ 326   2                      if(CloudAct.NeedAns_FailCount==1)//CloudReSend·ÅÆú·¢ËÍ
+ 327   2                      {
+ 328   3                              CloudAct.DisConectWiFi=true;//³õÊ¼»¯Ê§°Ü,·ÅÆúÁ¬½ÓWiFiÄ£×é,×ªÎª±¾µØ¹¤×÷Ä£Ê½
+ 329   3      #if LOGRANK_UART1 >= 2
+                  printf("LOG#:CloudInit ##[Fail]##\r\n"); //ÈÕÖ¾¼ÇÂ¼Cloud³õÊ¼»¯Ê§°Ü
+              #endif
+ 332   3                              return;
+ 333   3                      }
+ 334   2          }
+ 335   1              CloudAct.SubisBusy|=0x10;       //4ºÅSubÍ¨µÀÒÑÕ¼ÓÃ
+ 336   1      #if LOGRANK_UART1 >= 2
+                  printf("LOG#:CloudInit-MQTT_SUB_Service3 ok\r\n"); //ÈÕÖ¾¼ÇÂ¼MQTT¶©ÔÄ·þÎñ3³É¹¦
+              #endif
+ 339   1      //------------------------------------------------//
+ 340   1          CloudAct.Cmd = AT_MQTTPUB; //ÉèÖÃMQTT·¢²¼-Ä¬ÈÏÎª²ÎÊý·¢²¼PubCode=0
+ 341   1          CloudAct.PubCode_t = 0;
+ 342   1          CloudSend(0);
+ 343   1          while (CloudAct.NeedAns == true)
+ 344   1          {
+ 345   2              CloudReceive();
+ 346   2                      CloudReSend(22);//2,200msµÈ´ý
+ 347   2                      if(CloudAct.NeedAns_FailCount==1)//CloudReSend·ÅÆú·¢ËÍ
+ 348   2                      {
+ 349   3                              CloudAct.DisConectWiFi=true;//³õÊ¼»¯Ê§°Ü,·ÅÆúÁ¬½ÓWiFiÄ£×é,×ªÎª±¾µØ¹¤×÷Ä£Ê½
+ 350   3      #if LOGRANK_UART1 >= 2
+                  printf("LOG#:CloudInit ##[Fail]##\r\n"); //ÈÕÖ¾¼ÇÂ¼Cloud³õÊ¼»¯Ê§°Ü
+              #endif
+ 353   3                              return;
+ 354   3                      }
+ 355   2          }
+ 356   1          //------------------------------------------------//
+ 357   1      #if LOGRANK_UART1 >= 2
+                  printf("LOG#:CloudInit ok\r\n"); //ÈÕÖ¾¼ÇÂ¼Cloud³õÊ¼»¯Íê±Ï
+              #endif
+ 360   1      }
+ 361          //------------------------------------------------------------------------------------------------//
+C51 COMPILER V9.59.0.0   CLOUDHANDLE                                                       05/06/2020 16:02:26 PAGE 7   
+
+ 362          static void CloudReceive(void) //½ÓÊÕ´®¿Ú»º³åÇøÊý¾Ý
+ 363          {
+ 364   1          data ushort idx1 = uart2Idx1, idx2 = uart2Idx2;
+ 365   1          while (idx1 != idx2)
+ 366   1          {
+ 367   2              switch (CloudReceiveState)
+ 368   2              {
+ 369   3              case 0: //µÈ´ýÖÐ
+ 370   3                  if (uart2Buffer[idx1] == 0x0A)
+ 371   3                      CloudReceiveState = 1; //µÈ´ý/r
+ 372   3                  break;
+ 373   3              case 1:                             //¶ÁÈ¡ÖÐ
+ 374   3                  if (uart2Buffer[idx1] == 0x0D) //·¢ÏÖ\n,½áÊø¶ÁÈ¡,ÓÉCloudHandleReceiveº¯Êý´¦Àí
+ 375   3                  {
+ 376   4                      if (CloudReceiveIdx >= 2)                      //ÃüÁî¿ÕÏ¶,»Øµ½State=1;
+ 377   4                      {                                              //###´Ë´¦¾ö¶¨¹ýÂË³¤¶È²»×ã2µÄÃüÁî,Ö÷ÒªÕë¶ÔMQ
              -TTSENDµÄ>
- 301   5                          CloudReceiveBuffer[CloudReceiveIdx++] = 0; //·ÅÖÃ×Ö·û´®Ä©Î²,·½±ã´¦Àí
- 302   5                          CloudHandleReceive();                      //´¦ÀíÊÕµ½µÄÐÅÏ¢
- 303   5                      }
- 304   4                      CloudReceiveState = 0; //¿ªÊ¼ÐÂµÄ½ÓÊÕ
- 305   4                      CloudReceiveIdx = 0;
- 306   4                      CloudReceiveBuffer[0] = 0;
- 307   4                  }
- 308   3                  else
- 309   3                      CloudReceiveBuffer[CloudReceiveIdx++] = uart2_buffer[idx1];
- 310   3                              break;
- 311   3              }
- 312   2              if (idx1 + 1 == uart2_buffer_size)
- 313   2                  idx1 = 0;
- 314   2              else
- 315   2                  ++idx1;
- 316   2              uart2_idx1 = idx1;
- 317   2          }
- 318   1      }
- 319          static bool CloudSend(uchar op) //·¢ËÍÃüÁîµ½´®¿Ú
- 320          {
- 321   1          pdata uchar i = 0;
- 322   1          if (CloudAct.NeedAns) //ÉÐÓÐÐÅÏ¢Î´Ó¦´ð
- 323   1              return 1;
- 324   1          CloudSendIdx = sprintf(CloudSendBuffer, "AT+%s", ATCmd[CloudAct.Cmd]);
- 325   1          switch (op)
- 326   1          {
- 327   2          case 0: //ÉèÖÃ²ÎÊý
- 328   2              switch (CloudAct.Cmd)
- 329   2              {
- 330   3              case AT_MQTTAUTH:
- 331   3                  sprintf(CloudSendBuffer + CloudSendIdx, "=%s,%s\r", MQTTUser, MQTTPassword);
- 332   3                  break;
- 333   3              case AT_MQTTSOCK:
- 334   3                  sprintf(CloudSendBuffer + CloudSendIdx, "=%s,%s\r", MQTTHost, MQTTPort);
- 335   3                  break;
- 336   3              case AT_MQTTCID:
- 337   3                  sprintf(CloudSendBuffer + CloudSendIdx, "=%s\r", MQTTClientID);
- 338   3                  break;
- 339   3              case AT_MQTTKEEPALIVE:
- 340   3                  sprintf(CloudSendBuffer + CloudSendIdx, "=%s\r", MQTTHeartBeat);
- 341   3                  break;
- 342   3              case AT_MQTTRECONN:
- 343   3                  sprintf(CloudSendBuffer + CloudSendIdx, "=%s\r", MQTTAutoReConect);
- 344   3                  break;
- 345   3              case AT_MQTTAUTOSTART:
- 346   3                  sprintf(CloudSendBuffer + CloudSendIdx, "=%s\r", MQTTAutoStart);
- 347   3                  break;
- 348   3              case AT_MQTTSUB:
- 349   3                              switch(CloudAct.SubCode)
- 350   3                              {
- 351   4                              case 2://¶©ÔÄÔÆ¶Ëµ÷ÓÃÉè±¸·þÎñ1
- 352   4                                      sprintf(CloudSendBuffer + CloudSendIdx, "=" SubscribeSet4 "\r",
- 353   4                                                      CloudAct.SubCode,ProductKey, DeviceName,Service_1);
- 354   4                                      break;
- 355   4                              }
- 356   3                  break;
- 357   3              case AT_MQTTPUB:
- 358   3                  switch (CloudAct.PubCode_t) //Ä¿±êPub
- 359   3                  {
- 360   4                  case 0: //Éè±¸ÊôÐÔÉÏ±¨
-C51 COMPILER V9.59.0.0   CLOUDHANDLE                                                       04/17/2020 17:26:50 PAGE 7   
+ 378   5                          CloudReceiveBuffer[CloudReceiveIdx++] = 0; //·ÅÖÃ×Ö·û´®Ä©Î²,·½±ã´¦Àí
+ 379   5                          CloudHandleReceive();                      //´¦ÀíÊÕµ½µÄÐÅÏ¢
+ 380   5                      }
+ 381   4                      CloudReceiveState = 0; //¿ªÊ¼ÐÂµÄ½ÓÊÕ
+ 382   4                      CloudReceiveIdx = 0;
+ 383   4                      CloudReceiveBuffer[0] = 0;
+ 384   4                  }
+ 385   3                  else
+ 386   3                      CloudReceiveBuffer[CloudReceiveIdx++] = uart2Buffer[idx1];
+ 387   3                              break;
+ 388   3              }
+ 389   2              if (idx1 + 1 == uart2_buffer_size)
+ 390   2                  idx1 = 0;
+ 391   2              else
+ 392   2                  ++idx1;
+ 393   2              uart2Idx1 = idx1;
+ 394   2          }
+ 395   1      }
+ 396          static bool CloudSend(uchar op) //·¢ËÍÃüÁîµ½´®¿Ú
+ 397          {
+ 398   1          pdata uchar i = 0;
+ 399   1          if (CloudAct.NeedAns||CloudAct.DisConectWiFi==true) //ÉÐÓÐÐÅÏ¢Î´Ó¦´ð»òÁ¬½ÓÒÑ¶Ï¿ª
+ 400   1              return EXIT_FAILURE;
+ 401   1          CloudSendIdx = sprintf(CloudSendBuffer, "AT+%s", ATCmd[CloudAct.Cmd]);
+ 402   1          switch (op)
+ 403   1          {
+ 404   2          case 0: //ÉèÖÃ²ÎÊý
+ 405   2              switch (CloudAct.Cmd)
+ 406   2              {
+ 407   3              case AT_MQTTAUTH:
+ 408   3                  sprintf(CloudSendBuffer + CloudSendIdx, "=%s,%s\r", MQTTUser, MQTTPassword);
+ 409   3                  break;
+ 410   3              case AT_MQTTSOCK:
+ 411   3                  sprintf(CloudSendBuffer + CloudSendIdx, "=%s,%s\r", MQTTHost, MQTTPort);
+ 412   3                  break;
+ 413   3              case AT_MQTTCID:
+ 414   3                  sprintf(CloudSendBuffer + CloudSendIdx, "=%s\r", MQTTClientID);
+ 415   3                  break;
+ 416   3              case AT_MQTTKEEPALIVE:
+ 417   3                  sprintf(CloudSendBuffer + CloudSendIdx, "=%s\r", MQTTHeartBeat);
+ 418   3                  break;
+ 419   3              case AT_MQTTRECONN:
+ 420   3                  sprintf(CloudSendBuffer + CloudSendIdx, "=%s\r", MQTTAutoReConect);
+ 421   3                  break;
+ 422   3              case AT_MQTTAUTOSTART:
+C51 COMPILER V9.59.0.0   CLOUDHANDLE                                                       05/06/2020 16:02:26 PAGE 8   
 
- 361   4                      sprintf(CloudSendBuffer + CloudSendIdx, "=" PublishSet1 "\r",ProductKey, DeviceName);
- 362   4                      break;
- 363   4                  case 1: //Éè±¸ÊÂ¼þÉÏ±¨,Event_1:WaterTemperatureLow
- 364   4                      sprintf(CloudSendBuffer + CloudSendIdx, "=" PublishSet2 "\r",ProductKey, DeviceName, Event
+ 423   3                  sprintf(CloudSendBuffer + CloudSendIdx, "=%s\r", MQTTAutoStart);
+ 424   3                  break;
+ 425   3              case AT_MQTTSUB:
+ 426   3                      {
+ 427   4                              pdata uchar *P;
+ 428   4                              switch(CloudAct.SubCode)
+ 429   4                              {
+ 430   5                              case 2://¶©ÔÄÔÆ¶Ëµ÷ÓÃÉè±¸·þÎñ1
+ 431   5                                      P=Service_1;break;
+ 432   5                              case 3://¶©ÔÄÔÆ¶Ëµ÷ÓÃÉè±¸·þÎñ2
+ 433   5                                      P=Service_2;break;
+ 434   5                              case 4://¶©ÔÄÔÆ¶Ëµ÷ÓÃÉè±¸·þÎñ3
+ 435   5                                      P=Service_3;break;
+ 436   5                              }
+ 437   4                              sprintf(CloudSendBuffer + CloudSendIdx, "=" SubscribeSet4 "\r",
+ 438   4                                      CloudAct.SubCode,ProductKey, DeviceName,P);
+ 439   4                      }
+ 440   3                  break;
+ 441   3              case AT_MQTTPUB:
+ 442   3                  switch (CloudAct.PubCode_t) //Ä¿±êPub
+ 443   3                  {
+ 444   4                  case 0: //Éè±¸ÊôÐÔÉÏ±¨
+ 445   4                      sprintf(CloudSendBuffer + CloudSendIdx, "=" PublishSet1 "\r",ProductKey, DeviceName);
+ 446   4                      break;
+ 447   4                  case 1: //Éè±¸ÊÂ¼þÉÏ±¨,Event_1:WaterTemperatureLow
+ 448   4                      sprintf(CloudSendBuffer + CloudSendIdx, "=" PublishSet2 "\r",ProductKey, DeviceName, Event
              -_1);
- 365   4                      break;
- 366   4                  case 2: //Éè±¸ÊÂ¼þÉÏ±¨,Event_2:WaterTemperatureHigh
- 367   4                      sprintf(CloudSendBuffer + CloudSendIdx, "=" PublishSet2 "\r",ProductKey, DeviceName, Event
+ 449   4                      break;
+ 450   4                  case 2: //Éè±¸ÊÂ¼þÉÏ±¨,Event_2:WaterTemperatureHigh
+ 451   4                      sprintf(CloudSendBuffer + CloudSendIdx, "=" PublishSet2 "\r",ProductKey, DeviceName, Event
              -_2);
- 368   4                      break;
- 369   4                  case 200://ÉèÖÃÏìÓ¦·þÎñµ÷ÓÃ1,Service_1:LCD1602Display
- 370   4                      sprintf(CloudSendBuffer + CloudSendIdx, "=" PublishSet3 "\r",ProductKey, DeviceName, Servi
+ 452   4                      break;
+ 453   4                  case 200://ÉèÖÃÏìÓ¦·þÎñµ÷ÓÃ1,Service_1:LCD1602Display
+ 454   4                      sprintf(CloudSendBuffer + CloudSendIdx, "=" PublishSet3 "\r",ProductKey, DeviceName, Servi
              -ce_1);
- 371   4                      break;
- 372   4                  }
- 373   3                  break;
- 374   3              case AT_MQTTSEND:
- 375   3                  switch (CloudAct.PubCode) //µ±Ç°Pub
- 376   3                  {
- 377   4                  case 0: //Éè±¸ÊôÐÔÉÏ±¨
- 378   4                      sprintf(CloudSendBuffer + CloudSendIdx, "=%u\r" SendSet1 "\r",
- 379   4                              SendSet1Len + CloudSendDataIdx, CloudAct.MQTTSENDid, CloudSendData);
- 380   4                      break;
- 381   4                  case 1: //Éè±¸ÊÂ¼þÉÏ±¨,Event_1:WaterTemperatureLow
- 382   4                      sprintf(CloudSendBuffer + CloudSendIdx, "=%u\r" SendSet2 "\r",
- 383   4                              SendSet2Len + Event_1_Len + CloudSendDataIdx, CloudAct.MQTTSENDid, CloudSendData, 
+ 455   4                      break;
+ 456   4                              case 201://ÉèÖÃÏìÓ¦·þÎñµ÷ÓÃ2,Service_2:GY25Correction
+ 457   4                      sprintf(CloudSendBuffer + CloudSendIdx, "=" PublishSet3 "\r",ProductKey, DeviceName, Servi
+             -ce_2);
+ 458   4                      break;
+ 459   4                              case 202://ÉèÖÃÏìÓ¦·þÎñµ÷ÓÃ3,Service_3:MCUControl
+ 460   4                      sprintf(CloudSendBuffer + CloudSendIdx, "=" PublishSet3 "\r",ProductKey, DeviceName, Servi
+             -ce_3);
+ 461   4                      break;
+ 462   4                  }
+ 463   3                  break;
+ 464   3              case AT_MQTTSEND:
+ 465   3                  switch (CloudAct.PubCode) //µ±Ç°Pub
+ 466   3                  {
+ 467   4                  case 0: //Éè±¸ÊôÐÔÉÏ±¨
+ 468   4                      sprintf(CloudSendBuffer + CloudSendIdx, "=%u\r" SendSet1 "\r",
+ 469   4                              SendSet1Len + CloudSendDataIdx, CloudAct.MQTTSENDid, CloudSendData);
+ 470   4                      break;
+ 471   4                  case 1: //Éè±¸ÊÂ¼þÉÏ±¨,Event_1:WaterTemperatureLow
+ 472   4                      sprintf(CloudSendBuffer + CloudSendIdx, "=%u\r" SendSet2 "\r",
+ 473   4                              SendSet2Len + Event_1_Len + CloudSendDataIdx, CloudAct.MQTTSENDid, CloudSendData, 
              -Event_1);
- 384   4                      break;
- 385   4                  case 2: //Éè±¸ÊÂ¼þÉÏ±¨,Event_2:WaterTemperatureHigh
- 386   4                      sprintf(CloudSendBuffer + CloudSendIdx, "=%u\r" SendSet2 "\r",
- 387   4                              SendSet2Len + Event_2_Len + CloudSendDataIdx, CloudAct.MQTTSENDid, CloudSendData, 
+ 474   4                      break;
+ 475   4                  case 2: //Éè±¸ÊÂ¼þÉÏ±¨,Event_2:WaterTemperatureHigh
+ 476   4                      sprintf(CloudSendBuffer + CloudSendIdx, "=%u\r" SendSet2 "\r",
+ 477   4                              SendSet2Len + Event_2_Len + CloudSendDataIdx, CloudAct.MQTTSENDid, CloudSendData, 
              -Event_2);
- 388   4                      break;
- 389   4                              case 200://ÉèÖÃÏìÓ¦·þÎñµ÷ÓÃ1,Service_1:LCD1602Display
- 390   4                                      sprintf(CloudSendBuffer + CloudSendIdx, "=%u\r" SendSet3 "\r",
- 391   4                              SendSet3Len + CloudAct.SubIdLen + CloudSendDataIdx,
- 392   4                                                      CloudAct.SubId,CloudAct.NeedReport_ServiceReCode,CloudSendData);
- 393   4                                      break;
- 394   4                  }
- 395   3                              if(CloudAct.PubCode<200)//·ÇÏìÓ¦·þÎñµ÷ÓÃ
- 396   3                                      ++CloudAct.MQTTSENDid;//±¾µØidºÅ¸üÐÂ
- 397   3                  break; //MQTTSEND
- 398   3              case AT_WJAP:
- 399   3                  sprintf(CloudSendBuffer + CloudSendIdx, "=%s,%s\r", WiFiSSID, WiFiPassword);
- 400   3                  break;
- 401   3              default:
- 402   3                  break;
- 403   3              }
- 404   2              break;
- 405   2          case 3:
- 406   2              CloudSendBuffer[CloudSendIdx++] = '='; //²éÑ¯ÓÃ»§ÉèÖÃµÄ²ÎÊý
- 407   2          case 1:
- 408   2              CloudSendBuffer[CloudSendIdx++] = '?'; //²éÑ¯ÏµÍ³²ÎÊý
- 409   2          case 2:
- 410   2              CloudSendBuffer[CloudSendIdx++] = '\r'; //Ö´ÐÐÃüÁî
- 411   2              CloudSendBuffer[CloudSendIdx++] = 0;
- 412   2              break;
- 413   2          }
- 414   1      #if LOGRANK_UART1 >= 2
- 415   1          printf("LOG#:CloudSend$%s\r\n", CloudSendBuffer);
- 416   1      #endif
- 417   1          uart2_sendstr8(CloudSendBuffer);       //·¢ËÍ×¼±¸ºÃµÄÃüÁî×Ö·û´®
-C51 COMPILER V9.59.0.0   CLOUDHANDLE                                                       04/17/2020 17:26:50 PAGE 8   
+C51 COMPILER V9.59.0.0   CLOUDHANDLE                                                       05/06/2020 16:02:26 PAGE 9   
 
- 418   1          CloudAct.NeedAns = true;                  //¿ªÊ¼µÈ´ýÓ¦´ð
- 419   1          CloudAct.NeedAns_Time = CloudAct.SysTime; //¼ÇÂ¼·¢ËÍÃüÁîÊ±¼ä
- 420   1              CloudAct.NeedAns_Count = 0;
- 421   1          return 0;
- 422   1      }
- 423          static void CloudReSend(uchar Time)
- 424          {
- 425   1              xdata ulong Timex=Time;
- 426   1              Timex*=100;
- 427   1              if(CloudAct.NeedAns==false)//²»ÊÇµÈ´ýÓ¦´ð×´Ì¬
- 428   1                      return;
- 429   1              if(CloudAct.SysTime-CloudAct.NeedAns_Time>=Timex)//µÈ´ýÓ¦´ð³¬Ê±
- 430   1              {
- 431   2                      if(CloudAct.NeedAns_Count==2)//ÒÑ¾­ÖØÐÂ·¢ËÍÁ½´Î
- 432   2                      {
- 433   3      #if LOGRANK_UART1 >= 2
- 434   3          printf("LOG#:CloudReSend abandon\r\n");
- 435   3      #endif
- 436   3                              CloudAct.NeedAns=false;//·ÅÆúÖØÐÂ·¢ËÍ,È¡ÏûµÈ´ýÓ¦´ð×´Ì¬
- 437   3                              ++CloudAct.NeedAns_FailCount;
- 438   3                              if(CloudAct.NeedAns_FailCount==3)//Ê§°Ü3´Î,¿ªÊ¼ÑéÖ¤Ä£×éÊÇ·ñÔÚÏß
- 439   3                              {
- 440   4                                      ushort TempT;
- 441   4      #if LOGRANK_UART1 >= 2
- 442   4          printf("LOG#:CloudReSend check WiFi isOnline?\r\n");
- 443   4      #endif
- 444   4                                      CloudAct.Cmd = 0xFF;//·ÀÖ¹×èÈûok
- 445   4                                      uart2_sendstr8("\rAT\r");//·¢ËÍATÑéÖ¤
- 446   4                                      TempT = CloudAct.SysTime; //¼ÇÂ¼ÃüÁî·¢ËÍÊ±¼ä
- 447   4                                      CloudAct.NeedAns=true;
- 448   4                                      while (CloudAct.NeedAns == true)
- 449   4                                      {
- 450   5                                              CloudReceive();
- 451   5                                              if (CloudAct.SysTime - TempT >= 3500) //3500msÃ»ÓÐ»Ø¸´
- 452   5                                              {
- 453   6      #if LOGRANK_UART1 >= 2
- 454   6          printf("LOG#:CloudReSend check WiFi isOnline - No,DisConect Now\r\n");
- 455   6      #endif
- 456   6                                                      CloudAct.DisConectWiFi=true;
- 457   6                                                      IE2 &= ~ES2;//¹Ø±Õ´®¿Ú2ÖÐ¶Ï
- 458   6                                                      return;//Ä£×é¶Ï¿ªÁ¬½Ó,²»ÔÙÁ¬½ÓÄ£×é
- 459   6                                              }
- 460   5                                      }
- 461   4      #if LOGRANK_UART1 >= 2
- 462   4          printf("LOG#:CloudReSend check WiFi isOnline - Yes,Restart MCU\r\n");
- 463   4      #endif
- 464   4                                      MCURST();//Í¨¹ýÑéÖ¤,ÖØÆôMCUÊÔÍ¼ÖØÐÂÆ¥ÅäÄ£×é×´Ì¬
- 465   4                              }
- 466   3                      }
- 467   2                      else
- 468   2                      {
- 469   3      #if LOGRANK_UART1 >= 2
- 470   3          printf("LOG#:CloudReSend$%s,Cnt$%bu\r\n", CloudSendBuffer,CloudAct.NeedAns_Count+1);
- 471   3      #endif
- 472   3                              uart2_sendstr8(CloudSendBuffer);//ÖØÐÂ·¢ËÍ
- 473   3                              CloudAct.NeedAns_Time = CloudAct.SysTime;//¸üÐÂ·¢ËÍÊ±¼ä
- 474   3                              ++CloudAct.NeedAns_Count;//¼ÆÊýÖØÐÂ·¢ËÍ´ÎÊý
- 475   3                      }
- 476   2              }
- 477   1      }
- 478          static bool CloudReport(uchar Code) //Éè±¸ÉÏ±¨
- 479          {
-C51 COMPILER V9.59.0.0   CLOUDHANDLE                                                       04/17/2020 17:26:50 PAGE 9   
+ 478   4                      break;
+ 479   4                              case 200://ÉèÖÃÏìÓ¦·þÎñµ÷ÓÃ1,Service_1:LCD1602Display
+ 480   4                              case 201://ÉèÖÃÏìÓ¦·þÎñµ÷ÓÃ2,Service_2:GY25Correction
+ 481   4                              case 202://ÉèÖÃÏìÓ¦·þÎñµ÷ÓÃ3,Service_3:MCUControl
+ 482   4                                      sprintf(CloudSendBuffer + CloudSendIdx, "=%u\r" SendSet3 "\r",
+ 483   4                              SendSet3Len + CloudAct.SubIdLen + CloudSendDataIdx,
+ 484   4                                                      CloudAct.SubId,CloudAct.NeedReport_ServiceReCode,CloudSendData);
+ 485   4                                      break;
+ 486   4                  }
+ 487   3                              if(CloudAct.PubCode<200)//·ÇÏìÓ¦·þÎñµ÷ÓÃ
+ 488   3                                      ++CloudAct.MQTTSENDid;//±¾µØidºÅ¸üÐÂ
+ 489   3                  break; //MQTTSEND
+ 490   3              case AT_WJAP:
+ 491   3                  sprintf(CloudSendBuffer + CloudSendIdx, "=%s,%s\r", WiFiSSID, WiFiPassword);
+ 492   3                  break;
+ 493   3              default:
+ 494   3                  break;
+ 495   3              }
+ 496   2              break;
+ 497   2          case 3:
+ 498   2              CloudSendBuffer[CloudSendIdx++] = '='; //²éÑ¯ÓÃ»§ÉèÖÃµÄ²ÎÊý
+ 499   2          case 1:
+ 500   2              CloudSendBuffer[CloudSendIdx++] = '?'; //²éÑ¯ÏµÍ³²ÎÊý
+ 501   2          case 2:
+ 502   2              CloudSendBuffer[CloudSendIdx++] = '\r'; //Ö´ÐÐÃüÁî
+ 503   2              CloudSendBuffer[CloudSendIdx++] = 0;
+ 504   2              break;
+ 505   2          }
+ 506   1      #if LOGRANK_UART1 >= 2
+                  printf("LOG#:CloudSend$%s\r\n", CloudSendBuffer);
+              #endif
+ 509   1          uart2_sendstr8(CloudSendBuffer);       //·¢ËÍ×¼±¸ºÃµÄÃüÁî×Ö·û´®
+ 510   1          CloudAct.NeedAns = true;                  //¿ªÊ¼µÈ´ýÓ¦´ð
+ 511   1          CloudAct.NeedAns_Time = CloudAct.SysTime; //¼ÇÂ¼·¢ËÍÃüÁîÊ±¼ä
+ 512   1              CloudAct.NeedAns_Count = 0;
+ 513   1          return EXIT_SUCCESS;
+ 514   1      }
+ 515          static void CloudReSend(uchar Time)
+ 516          {
+ 517   1              xdata ulong Timex=Time;
+ 518   1              Timex*=100;
+ 519   1              if(CloudAct.NeedAns==false || CloudAct.DisConectWiFi==true)//²»ÊÇµÈ´ýÓ¦´ð×´Ì¬»òÁ¬½ÓÒÑ¶Ï¿ª
+ 520   1                      return;
+ 521   1              if(CloudAct.SysTime-CloudAct.NeedAns_Time>=Timex)//µÈ´ýÓ¦´ð³¬Ê±
+ 522   1              {
+ 523   2                      if(CloudAct.NeedAns_Count==2)//ÒÑ¾­ÖØÐÂ·¢ËÍÁ½´Î
+ 524   2                      {
+ 525   3                              CloudAct.NeedAns=false;//·ÅÆúÖØÐÂ·¢ËÍ,È¡ÏûµÈ´ýÓ¦´ð×´Ì¬
+ 526   3                              ++CloudAct.NeedAns_FailCount;
+ 527   3      #if LOGRANK_UART1 >= 2
+                      printf("LOG#:CloudReSend abandon,FailCount:%bu\r\n",CloudAct.NeedAns_FailCount);
+              #endif
+ 530   3                              if(CloudAct.NeedAns_FailCount==3)//Ê§°Ü3´Î,¿ªÊ¼ÑéÖ¤Ä£×éÊÇ·ñÔÚÏß
+ 531   3                              {
+ 532   4                                      ushort TempT;
+ 533   4      #if LOGRANK_UART1 >= 2
+                  printf("LOG#:CloudReSend check WiFi isOnline?\r\n");
+              #endif
+ 536   4                                      CloudAct.Cmd = 0xFF;//·ÀÖ¹×èÈûok
+ 537   4                                      uart2_sendstr8("\rAT\r");//·¢ËÍATÑéÖ¤
+ 538   4                                      TempT = CloudAct.SysTime; //¼ÇÂ¼ÃüÁî·¢ËÍÊ±¼ä
+ 539   4                                      CloudAct.NeedAns=true;
+C51 COMPILER V9.59.0.0   CLOUDHANDLE                                                       05/06/2020 16:02:26 PAGE 10  
 
- 480   1          if (CloudAct.NeedAns||CloudAct.DisConectWiFi==true) //ÉÐÓÐÐÅÏ¢Î´Ó¦´ð,»òÄ£×é¶Ï¿ª×´Ì¬
- 481   1              return 1;
- 482   1          if (Code == 0)
- 483   1          {
- 484   2              if (CloudAct.PubCode != 0) //PubÎ´ÕýÈ·ÇÐ»»,ÇÐ»»ºó·µ»Ø
- 485   2              {
- 486   3                  if (CloudAct.PubCode_t != 0) //PubÎ´¿ªÊ¼¿ªÊ¼ÇÐ»»µ½Pub=0
- 487   3                  {
- 488   4                      CloudAct.Cmd = AT_MQTTPUB;
- 489   4                      CloudAct.PubCode_t = 0; //±êÖ¾ÒÑ¾­¿ªÊ¼ÇÐ»»
- 490   4                      CloudSend(0);           //ÇÐ»»µ½Éè±¸ÊôÐÔPub
- 491   4                  }
- 492   3                  return 1;
- 493   3              }
- 494   2              CloudSendDataIdx = sprintf(CloudSendData, "\"WaterTemperature\":%.3f",
- 495   2                                         (DS18B20ST.TemperatureData) * DS18B20ReTransfrom[DS18B20ST.ResolutionMo
+ 540   4                                      while (CloudAct.NeedAns == true)
+ 541   4                                      {
+ 542   5                                              CloudReceive();
+ 543   5                                              if (CloudAct.SysTime - TempT >= 3500) //3500msÃ»ÓÐ»Ø¸´
+ 544   5                                              {
+ 545   6      #if LOGRANK_UART1 >= 2
+                  printf("LOG#:CloudReSend check WiFi isOnline - No,DisConect Now\r\n");
+              #endif
+ 548   6                                                      CloudAct.DisConectWiFi=true;
+ 549   6                                                      IE2 &= ~ES2;//¹Ø±Õ´®¿Ú2ÖÐ¶Ï
+ 550   6                                                      return;//Ä£×é¶Ï¿ªÁ¬½Ó,²»ÔÙÁ¬½ÓÄ£×é
+ 551   6                                              }
+ 552   5                                      }
+ 553   4      #if LOGRANK_UART1 >= 2
+                  printf("LOG#:CloudReSend check WiFi isOnline - Yes,Restart MCU\r\n");
+              #endif
+ 556   4                                      MCURST();//Í¨¹ýÑéÖ¤,ÖØÆôMCUÊÔÍ¼ÖØÐÂÆ¥ÅäÄ£×é×´Ì¬
+ 557   4                              }
+ 558   3                      }
+ 559   2                      else
+ 560   2                      {
+ 561   3      #if LOGRANK_UART1 >= 2
+                  printf("LOG#:CloudReSend$%s,Cnt$%bu\r\n", CloudSendBuffer,CloudAct.NeedAns_Count+1);
+              #endif
+ 564   3                              uart2_sendstr8(CloudSendBuffer);//ÖØÐÂ·¢ËÍ
+ 565   3                              CloudAct.NeedAns_Time = CloudAct.SysTime;//¸üÐÂ·¢ËÍÊ±¼ä
+ 566   3                              ++CloudAct.NeedAns_Count;//¼ÆÊýÖØÐÂ·¢ËÍ´ÎÊý
+ 567   3                      }
+ 568   2              }
+ 569   1      }
+ 570          static bool CloudReport(uchar Code) //Éè±¸ÉÏ±¨
+ 571          {
+ 572   1          if (CloudAct.NeedAns||CloudAct.DisConectWiFi==true) //ÉÐÓÐÐÅÏ¢Î´Ó¦´ð,»òÄ£×é¶Ï¿ª×´Ì¬
+ 573   1              return EXIT_FAILURE;
+ 574   1          if (Code == 0)
+ 575   1          {
+ 576   2              if (CloudAct.PubCode != 0) //PubÎ´ÕýÈ·ÇÐ»»,ÇÐ»»ºó·µ»Ø
+ 577   2              {
+ 578   3                  if (CloudAct.PubCode_t != 0) //PubÎ´¿ªÊ¼¿ªÊ¼ÇÐ»»µ½Pub=0
+ 579   3                  {
+ 580   4                      CloudAct.Cmd = AT_MQTTPUB;
+ 581   4                      CloudAct.PubCode_t = 0; //±êÖ¾ÒÑ¾­¿ªÊ¼ÇÐ»»
+ 582   4                      CloudSend(0);           //ÇÐ»»µ½Éè±¸ÊôÐÔPub
+ 583   4                  }
+ 584   3                  return EXIT_FAILURE;
+ 585   3              }
+ 586   2                      CloudSendDataIdx = 0;
+ 587   2                      if(CloudAct.NeedReportT.GY_25)
+ 588   2                              CloudSendDataIdx += sprintf(CloudSendData, "\"HeadAngle\":%.2f,\"PitchAngle\":%.2f,\"RollAngle\":%.2f",
+ 589   2                              GY_25ST.HeadAngle/100.0,GY_25ST.PitchAngle/100.0,GY_25ST.RollAngle/100.0);
+ 590   2                      if(CloudAct.NeedReportT.DS18B20)
+ 591   2                      {
+ 592   3                              if(CloudSendDataIdx)
+ 593   3                                      CloudSendData[CloudSendDataIdx++]=',';
+ 594   3                              CloudSendDataIdx += sprintf(CloudSendData, "\"WaterTemperature\":%.3f",
+ 595   3                                         (DS18B20ST.TemperatureData) * DS18B20ReTransfrom[DS18B20ST.ResolutionMo
              -de] + (float)DS18B20MinT);
- 496   2          }
- 497   1          else
- 498   1          {
- 499   2              if (CloudAct.PubCode != Code) //PubÎ´ÕýÈ·ÇÐ»»
- 500   2              {
- 501   3                              pdata uchar TempFailCount = CloudAct.NeedAns_FailCount;
- 502   3                  CloudAct.Cmd = AT_MQTTPUB;
- 503   3                  CloudAct.PubCode_t = Code;       //±êÖ¾ÒÑ¾­¿ªÊ¼ÇÐ»»
- 504   3                  CloudSend(0);                    //ÇÐ»»µ½Éè±¸ÊôÐÔPub
- 505   3                  while (CloudAct.NeedAns == true)
- 506   3                              {
- 507   4                                      CloudReceive();
- 508   4                                      CloudReSend(5);//500msµÈ´ý
- 509   4                                      if(CloudAct.NeedAns_FailCount==TempFailCount+1)//CloudReSend·ÅÆú·¢ËÍ
- 510   4                                              return 1;//Pub×ª»»Ê§°Ü
- 511   4                              }
- 512   3              }
- 513   2              switch (Code)
- 514   2              {
- 515   3              case 1:
- 516   3                  CloudSendDataIdx = sprintf(CloudSendData, "\"Error\":%bu",DS18B20ST.TemperatureLow);
- 517   3                  break;
- 518   3              case 2:
- 519   3                  CloudSendDataIdx = sprintf(CloudSendData, "\"Error\":%bu",DS18B20ST.TemperatureHigh);
- 520   3                  break;
- 521   3                      case 200:
- 522   3                              CloudSendDataIdx = sprintf(CloudSendData, "");//Ã»ÓÐ·µ»Ø²ÎÊý
- 523   3                  break;
- 524   3              }
- 525   2          }
- 526   1          CloudAct.Cmd = AT_MQTTSEND; //ÒÑÐ´ÈëÉè±¸´ýÉÏ±¨ÊôÐÔ,×¼±¸·¢²¼
- 527   1          CloudSend(0);
- 528   1          return 0;
- 529   1      }
- 530          static void CloudHandleReceive(void)
- 531          {
- 532   1      #if LOGRANK_UART1 >= 3
- 533   1          printf("LOG:HandleReceive$%s\r\n", CloudReceiveBuffer);
- 534   1      #endif
- 535   1          if (strncmp(CloudReceiveBuffer, "ERROR", 5) == 0) //ÃüÁîÖ´ÐÐÒì³£
- 536   1          {
- 537   2              //Ä¿Ç°²»´¦Àí,´ýÍêÉÆ
- 538   2          }
- 539   1          else if (strncmp(CloudReceiveBuffer, "OK", 2) == 0) //ÃüÁîÖ´ÐÐÕý³£
- 540   1          {
-C51 COMPILER V9.59.0.0   CLOUDHANDLE                                                       04/17/2020 17:26:50 PAGE 10  
+ 596   3                      }
+ 597   2              }
+ 598   1          else
+ 599   1          {
+ 600   2              if (CloudAct.PubCode != Code) //PubÎ´ÕýÈ·ÇÐ»»
+C51 COMPILER V9.59.0.0   CLOUDHANDLE                                                       05/06/2020 16:02:26 PAGE 11  
 
- 541   2              if (CloudAct.Cmd != AT_MQTTSTART && CloudAct.Cmd != AT_MQTTSEND && CloudAct.Cmd != AT_MQTTSUB && C
-             -loudAct.Cmd != AT_WJAP)
- 542   2              {
- 543   3                  CloudAct.NeedAns = false;
- 544   3                  if (CloudAct.Cmd == AT_MQTTPUB)
- 545   3                      CloudAct.PubCode = CloudAct.PubCode_t; //ÇÐ»»PubÍê±Ï
- 546   3              }
- 547   2          }
- 548   1          else if (CloudReceiveBuffer[0] == '+') //¶ÁÈ¡ÏêÏ¸ÐÅÏ¢
- 549   1          {
- 550   2              if (strncmp(CloudReceiveBuffer + 1, "MQTTRECV", 8) == 0) //ÊÕµ½¶©ÔÄÐÅÏ¢
- 551   2              {
- 552   3                              pdata uchar *P=CloudReceiveBuffer+16,*Pend;//´ÓÕâÀï¿ªÊ¼²éÕÒidºÍparams
- 553   3                              pdata uchar i=0;
- 554   3                  switch (CloudReceiveBuffer[10]) //ÅÐ¶Ï¶©ÔÄµÄÍ¨µÀ
- 555   3                  {
- 556   4                  case '0': //ÔÆ¶ËÏìÓ¦ÊôÐÔÉÏ±¨,ÔÆ¶ËÏìÓ¦ÊÂ¼þÉÏ±¨-³£±ÕÍ¨µÀ
- 557   4                      break;
- 558   4                  case '1': //ÔÆ¶ËÉèÖÃÉè±¸ÊôÐÔ
- 559   4                      break;
- 560   4                  case '2': //ÔÆ¶Ëµ÷ÓÃÉè±¸·þÎñ:1
- 561   4                                      P=strstr(P,"\"id\":\""),P+=6;
- 562   4                                      while(*P!='"')  //Ñ¡ÓÃ"×÷Îª½áÊø±êÖ¾
- 563   4                                              CloudAct.SubId[i++]=*P++;
- 564   4                                      CloudAct.SubIdLen=i;
- 565   4                                      P=strstr(P,"\"params\":{"),P+=10;
- 566   4                                      Pend=strchr(P,'}');
- 567   4                              {
- 568   5                                      bool isRow2;
- 569   5                                      pdata uchar str[17]="                ",readcnt=0;//±£Ö¤16¸ö×Ö·û,Ë¢ÐÂÊ£Óà²¿·ÖÎª¿Õ°×
- 570   5                                      while(P!=Pend)
- 571   5                                      {
- 572   6                                              ++P;//Ìø¹ý"
- 573   6                                              if(strncmp(P,"Text",4)==0)
- 574   6                                              {
- 575   7                                                      pdata uchar i=0;
- 576   7                                                      P+=7;
- 577   7                                                      while(*P!='"')
- 578   7                                                              str[i++]=*P++;
- 579   7                                                      //str[i]=0;//Íê³É×Ö·û´®¶ÁÈ¡
- 580   7                                                      ++P;//Ìø¹ý"
- 581   7                                              }
- 582   6                                              else
- 583   6                                              {
- 584   7                                                      P+=8;
- 585   7                                                      isRow2=(*P++)-'0';
- 586   7                                              }
- 587   6                                              ++readcnt;//¶Áµ½Ò»¸ö²ÎÊý
- 588   6                                              if(*P==',')
- 589   6                                                      ++P;
- 590   6                                      }
- 591   5                                      if(readcnt==2)//²ÎÊý¶Áµ½Á½¸ö,²ÎÊýÍêÕû
- 592   5                                      {
- 593   6                                              LCD1602WriteLine(str,isRow2);//Ö´ÐÐ·þÎñµ÷ÓÃ
- 594   6                                              CloudAct.NeedReport_ServiceReCode=200;//ÇëÇó³É¹¦
- 595   6                                      }
- 596   5                                      else
- 597   5                                              CloudAct.NeedReport_ServiceReCode=460;//ÇëÇó²ÎÊý´íÎó
- 598   5                                      CloudAct.NeedReport_Service1=true;//Service1ÐèÒª»Ø¸´
- 599   5                              }
- 600   4                      break;
- 601   4                  case '3': //ÔÆ¶Ëµ÷ÓÃÉè±¸·þÎñ
-C51 COMPILER V9.59.0.0   CLOUDHANDLE                                                       04/17/2020 17:26:50 PAGE 11  
+ 601   2              {
+ 602   3                              pdata uchar TempFailCount = CloudAct.NeedAns_FailCount;
+ 603   3                  CloudAct.Cmd = AT_MQTTPUB;
+ 604   3                  CloudAct.PubCode_t = Code;       //±êÖ¾ÒÑ¾­¿ªÊ¼ÇÐ»»
+ 605   3                  CloudSend(0);                    //ÇÐ»»µ½Éè±¸ÊôÐÔPub
+ 606   3                  while (CloudAct.NeedAns == true)
+ 607   3                              {
+ 608   4                                      CloudReceive();
+ 609   4                                      CloudReSend(5);//500msµÈ´ý
+ 610   4                                      if(CloudAct.NeedAns_FailCount==TempFailCount+1)//CloudReSend·ÅÆú·¢ËÍ
+ 611   4                                              return EXIT_FAILURE;//Pub×ª»»Ê§°Ü
+ 612   4                              }
+ 613   3              }
+ 614   2              switch (Code)
+ 615   2              {
+ 616   3              case 1://Éè±¸ÊÂ¼þÉÏ±¨,Event_1:WaterTemperatureLow
+ 617   3                  CloudSendDataIdx = sprintf(CloudSendData, "\"Error\":%bu",DS18B20ST.TemperatureLow);break;
+ 618   3              case 2://Éè±¸ÊÂ¼þÉÏ±¨,Event_2:WaterTemperatureHigh
+ 619   3                  CloudSendDataIdx = sprintf(CloudSendData, "\"Error\":%bu",DS18B20ST.TemperatureHigh);break;
+ 620   3                      case 200://ÉèÖÃÏìÓ¦·þÎñµ÷ÓÃ1,Service_1:LCD1602Display
+ 621   3                      case 201://ÉèÖÃÏìÓ¦·þÎñµ÷ÓÃ2,Service_2:GY25Correction
+ 622   3                      case 202://ÉèÖÃÏìÓ¦·þÎñµ÷ÓÃ3,Service_3:MCUControl       
+ 623   3                              CloudSendDataIdx = sprintf(CloudSendData, "");//Ã»ÓÐ·µ»Ø²ÎÊý
+ 624   3                  break;
+ 625   3              }
+ 626   2          }
+ 627   1          CloudAct.Cmd = AT_MQTTSEND; //ÒÑÐ´ÈëÉè±¸´ýÉÏ±¨ÊôÐÔ,×¼±¸·¢²¼
+ 628   1          CloudSend(0);
+ 629   1          return EXIT_SUCCESS;
+ 630   1      }
+ 631          static void CloudHandleReceive(void)
+ 632          {
+ 633   1      #if LOGRANK_UART1 >= 3
+                  printf("LOG:HandleReceive$%s\r\n", CloudReceiveBuffer);
+              #endif
+ 636   1          if (strncmp(CloudReceiveBuffer, "ERROR", 5) == 0) //ÃüÁîÖ´ÐÐÒì³£
+ 637   1          {
+ 638   2              //Ä¿Ç°²»´¦Àí,´ýÍêÉÆ
+ 639   2          }
+ 640   1          else if (strncmp(CloudReceiveBuffer, "OK", 2) == 0) //ÃüÁîÖ´ÐÐÕý³£
+ 641   1          {
+ 642   2              if (CloudAct.Cmd != AT_MQTTSTART && CloudAct.Cmd != AT_MQTTSEND 
+ 643   2                              && CloudAct.Cmd != AT_MQTTSUB && CloudAct.Cmd != AT_WJAP
+ 644   2                              && CloudAct.Cmd != AT_MQTTCLOSE)
+ 645   2              {
+ 646   3                  CloudAct.NeedAns = false;
+ 647   3                  if (CloudAct.Cmd == AT_MQTTPUB)
+ 648   3                      CloudAct.PubCode = CloudAct.PubCode_t; //ÇÐ»»PubÍê±Ï
+ 649   3              }
+ 650   2          }
+ 651   1          else if (CloudReceiveBuffer[0] == '+') //¶ÁÈ¡ÏêÏ¸ÐÅÏ¢
+ 652   1          {
+ 653   2              if (strncmp(CloudReceiveBuffer + 1, "MQTTRECV", 8) == 0) //ÊÕµ½¶©ÔÄÐÅÏ¢
+ 654   2              {
+ 655   3                              pdata uchar *P=CloudReceiveBuffer+16;//´ÓÕâÀï¿ªÊ¼²éÕÒidºÍparams
+ 656   3                              pdata uchar i=0;
+ 657   3                              P=strstr(P,"\"id\":\""),P+=6;
+ 658   3                              while(*P!='"')  //Ñ¡ÓÃ"×÷Îª½áÊø±êÖ¾
+ 659   3                                      CloudAct.SubId[i++]=*P++;
+ 660   3                              CloudAct.SubIdLen=i;
+ 661   3                  switch (CloudReceiveBuffer[10]) //ÅÐ¶Ï¶©ÔÄµÄÍ¨µÀ
+ 662   3                  {
+C51 COMPILER V9.59.0.0   CLOUDHANDLE                                                       05/06/2020 16:02:26 PAGE 12  
 
- 602   4                      break;
- 603   4                  case '4': //ÔÆ¶Ëµ÷ÓÃÉè±¸·þÎñ
- 604   4                      break;
- 605   4                  case '5': //ÔÆ¶Ëµ÷ÓÃÉè±¸·þÎñ
- 606   4                      break;
- 607   4                  case '6': //ÔÆ¶Ëµ÷ÓÃÉè±¸·þÎñ
- 608   4                      break;
- 609   4                  }
- 610   3              }
- 611   2              else if (strncmp(CloudReceiveBuffer + 1, "MQTTEVENT", 9) == 0)
- 612   2              {
- 613   3                  if (CloudAct.Cmd == AT_MQTTSTART && (strncmp(CloudReceiveBuffer + 11, "CONNECT", 7) == 0))
- 614   3                      if (strncmp(CloudReceiveBuffer + 19, "SUCCESS", 7) == 0)
- 615   3                          CloudAct.NeedAns = false; //³É¹¦Á¬½Ó
- 616   3                  if (CloudAct.Cmd == AT_MQTTSUB && (strncmp(CloudReceiveBuffer + 13, "SUBSCRIBE", 9) == 0))
- 617   3                      if (strncmp(CloudReceiveBuffer + 23, "SUCCESS", 7) == 0)
- 618   3                          CloudAct.NeedAns = false; //³É¹¦ÉèÖÃ¶©ÔÄ
- 619   3                  if (CloudAct.Cmd == AT_MQTTSEND && (strncmp(CloudReceiveBuffer + 11, "PUBLISH", 7) == 0))
- 620   3                      if (strncmp(CloudReceiveBuffer + 19, "SUCCESS", 7) == 0)
- 621   3                          CloudAct.NeedAns = false; //³É¹¦·¢²¼
- 622   3              }
- 623   2              else if (strncmp(CloudReceiveBuffer + 1, "WEVENT", 6) == 0)
- 624   2              {
- 625   3                  if (CloudAct.Cmd == AT_WJAP && (strncmp(CloudReceiveBuffer + 8, "STATION_UP", 10) == 0))
- 626   3                      CloudAct.NeedAns = false; //³É¹¦Á¬½Ó
- 627   3              }
- 628   2          }
- 629   1          else //¶ÁÈ¡¸½¼ÓÐÅÏ¢
- 630   1          {
- 631   2              //Ä¿Ç°ÓÃ²»µ½
- 632   2          }
- 633   1      }
- 634          //------------------------------------------------------------------------------------------------//
+ 663   4                  case '0': //ÔÆ¶ËÏìÓ¦ÊôÐÔÉÏ±¨,ÔÆ¶ËÏìÓ¦ÊÂ¼þÉÏ±¨-³£±ÕÍ¨µÀ
+ 664   4                      break;
+ 665   4                  case '1': //ÔÆ¶ËÉèÖÃÉè±¸ÊôÐÔ
+ 666   4                      break;
+ 667   4                  case '2': //ÔÆ¶Ëµ÷ÓÃÉè±¸·þÎñ:1,Service_1:LCD1602Display
+ 668   4                              {
+ 669   5                                      pdata uchar *Pend=strstr(P,"},\"version\":\"1.0.0\"}");//ÕÒÑ°Ä©Î²}
+ 670   5                                      bool isRow2;
+ 671   5                                      pdata uchar str[17]="                ",readcnt=0;//±£Ö¤16¸ö×Ö·û,Ë¢ÐÂÊ£Óà²¿·ÖÎª¿Õ°×
+ 672   5                                      P=strstr(P,"\"params\":{"),P+=10;
+ 673   5                                      while(P!=Pend)
+ 674   5                                      {
+ 675   6                                              ++P;//Ìø¹ý"
+ 676   6                                              if(strncmp(P,"Text",4)==0)
+ 677   6                                              {
+ 678   7                                                      pdata uchar i=0;
+ 679   7                                                      P+=7;
+ 680   7                                                      while(*P!='"'&&i!=16)
+ 681   7                                                      {
+ 682   8                                                              if(*P=='\\')  //ÎÞÄÔ¹ýÂË×ªÒå×Ö·û
+ 683   8                                                                      ++P;
+ 684   8                                                              str[i++]=*P++;
+ 685   8                                                      }
+ 686   7                                                      while(*P!='"')
+ 687   7                                                              ++P;
+ 688   7                                                      ++P;//Ìø¹ý"
+ 689   7                                              }
+ 690   6                                              else
+ 691   6                                              {
+ 692   7                                                      P+=8;
+ 693   7                                                      isRow2=(*P++)-'0';
+ 694   7                                              }
+ 695   6                                              ++readcnt;//¶Áµ½Ò»¸ö²ÎÊý
+ 696   6                                              if(*P==',')
+ 697   6                                                      ++P;
+ 698   6                                      }
+ 699   5                                      if(readcnt==2)//²ÎÊý¶Áµ½Á½¸ö,²ÎÊýÍêÕû
+ 700   5                                      {
+ 701   6                                              LCD1602WriteLine(str,isRow2);//Ö´ÐÐ·þÎñµ÷ÓÃ
+ 702   6                                              CloudAct.NeedReport_ServiceReCode=200;//ÇëÇó³É¹¦
+ 703   6                                      }
+ 704   5                                      else
+ 705   5                                              CloudAct.NeedReport_ServiceReCode=460;//ÇëÇó²ÎÊý´íÎó
+ 706   5                                      CloudAct.NeedReport_Service1=true;//Service1ÐèÒª»Ø¸´
+ 707   5                              }
+ 708   4                      break;
+ 709   4                  case '3': //ÔÆ¶Ëµ÷ÓÃÉè±¸·þÎñ:2,Service_2:GY25Correction
+ 710   4                                      P=strstr(P,"{\"object\":"),P+=10;
+ 711   4                                      switch(*P)
+ 712   4                                      {
+ 713   5                                      case '1'://Ð£Õý¸©Ñö½ÇºÍºá¹ö½Ç
+ 714   5                                              GY_25SetCmd(GY_25Correction1);break;
+ 715   5                                      case '2'://Ð£Õýº½Ïò½Ç
+ 716   5                                              GY_25SetCmd(GY_25Correction2);break;
+ 717   5                                      }
+ 718   4                                      CloudAct.NeedReport_ServiceReCode=200;//ÇëÇó³É¹¦
+ 719   4                                      CloudAct.NeedReport_Service2=true;//Service2ÐèÒª»Ø¸´
+ 720   4                      break;
+ 721   4                  case '4': //ÔÆ¶Ëµ÷ÓÃÉè±¸·þÎñ:3,Service_3:MCUControl
+ 722   4                                      P=strstr(P,"{\"ID\":"),P+=6;
+ 723   4                                      switch(*P)
+ 724   4                                      {
+C51 COMPILER V9.59.0.0   CLOUDHANDLE                                                       05/06/2020 16:02:26 PAGE 13  
+
+ 725   5                                      case '0'://ÀëÏß
+ 726   5                                              CloudAct.ServiceMCUOffline=true;break;
+ 727   5                                      case '1'://ÀëÏßºóÖØÆôMCU
+ 728   5                                              CloudAct.ServiceMCURst=true;break;
+ 729   5                                      }
+ 730   4                                      CloudAct.NeedReport_ServiceReCode=200;//ÇëÇó³É¹¦
+ 731   4                                      CloudAct.NeedReport_Service3=true;//Service3ÐèÒª»Ø¸´
+ 732   4                      break;
+ 733   4                  case '5': //ÔÆ¶Ëµ÷ÓÃÉè±¸·þÎñ
+ 734   4                      break;
+ 735   4                  case '6': //ÔÆ¶Ëµ÷ÓÃÉè±¸·þÎñ
+ 736   4                      break;
+ 737   4                  }
+ 738   3              }
+ 739   2              else if (strncmp(CloudReceiveBuffer + 1, "MQTTEVENT", 9) == 0)
+ 740   2              {
+ 741   3                  if (CloudAct.Cmd == AT_MQTTSTART && (strncmp(CloudReceiveBuffer + 11, "CONNECT", 7) == 0))
+ 742   3                      if (strncmp(CloudReceiveBuffer + 19, "SUCCESS", 7) == 0)
+ 743   3                          CloudAct.NeedAns = false; //³É¹¦Á¬½Ó
+ 744   3                  if (CloudAct.Cmd == AT_MQTTSUB && (strncmp(CloudReceiveBuffer + 13, "SUBSCRIBE", 9) == 0))
+ 745   3                      if (strncmp(CloudReceiveBuffer + 23, "SUCCESS", 7) == 0)
+ 746   3                          CloudAct.NeedAns = false; //³É¹¦ÉèÖÃ¶©ÔÄ
+ 747   3                  if (CloudAct.Cmd == AT_MQTTSEND && (strncmp(CloudReceiveBuffer + 11, "PUBLISH", 7) == 0))
+ 748   3                      if (strncmp(CloudReceiveBuffer + 19, "SUCCESS", 7) == 0)
+ 749   3                          CloudAct.NeedAns = false; //³É¹¦·¢²¼
+ 750   3                  if (CloudAct.Cmd == AT_MQTTCLOSE && (strncmp(CloudReceiveBuffer + 11, "CLOSE", 5) == 0))
+ 751   3                      if (strncmp(CloudReceiveBuffer + 17, "SUCCESS", 7) == 0)
+ 752   3                          CloudAct.NeedAns = false,CloudAct.DisConectWiFi=true; //³É¹¦¶Ï¿ªÁ¬½Ó
+ 753   3              }
+ 754   2              else if (strncmp(CloudReceiveBuffer + 1, "WEVENT", 6) == 0)
+ 755   2              {
+ 756   3                  if (CloudAct.Cmd == AT_WJAP && (strncmp(CloudReceiveBuffer + 8, "STATION_UP", 10) == 0))
+ 757   3                      CloudAct.NeedAns = false; //³É¹¦Á¬½Ó
+ 758   3              }
+ 759   2          }
+ 760   1          else //¶ÁÈ¡¸½¼ÓÐÅÏ¢
+ 761   1          {
+ 762   2              //Ä¿Ç°ÓÃ²»µ½
+ 763   2          }
+ 764   1      }
+ 765          //------------------------------------------------------------------------------------------------//
 
 
 MODULE INFORMATION:   STATIC OVERLAYABLE
-   CODE SIZE        =   3419    ----
-   CONSTANT SIZE    =   1221    ----
-   XDATA SIZE       =   1144       4
-   PDATA SIZE       =   ----      28
+   CODE SIZE        =   4030    ----
+   CONSTANT SIZE    =    638    ----
+   XDATA SIZE       =   1152       4
+   PDATA SIZE       =   ----      31
    DATA SIZE        =      1       8
    IDATA SIZE       =   ----    ----
-   BIT SIZE         =   ----       1
+   BIT SIZE         =      1       1
    EDATA SIZE       =   ----    ----
    HDATA SIZE       =   ----    ----
    XDATA CONST SIZE =   ----    ----

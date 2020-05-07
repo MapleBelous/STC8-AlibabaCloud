@@ -9,9 +9,6 @@ sbit LED_BLUE = P0 ^ 7;
 sbit LED_RED = P1 ^ 0;
 sbit LED_GREEN = P1 ^ 1;
 
-//Gizwits-ESP8266
-sbit ESP8266_RST = P3 ^ 6;
-
 //DS18B20
 sbit DS18B20_DATA = P4 ^ 1;
 

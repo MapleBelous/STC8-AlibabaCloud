@@ -1,11 +1,12 @@
-C51 COMPILER V9.59.0.0   CLOUDCODEARRAY                                                    04/17/2020 16:44:00 PAGE 1   
+C51 COMPILER V9.59.0.0   CLOUDCODEARRAY                                                    05/06/2020 16:02:26 PAGE 1   
 
 
 C51 COMPILER V9.59.0.0, COMPILATION OF MODULE CLOUDCODEARRAY
 OBJECT MODULE PLACED IN .\Objects\CloudCodeArray.obj
 COMPILER INVOKED BY: C:\Keil_v5\C51\BIN\C51.EXE Code\AlibabaCloud\CloudCodeArray.c OMF2 OPTIMIZE(9,SPEED) BROWSE MODP2 I
                     -NCDIR(.\Code\Basic\def;.\Code\Basic\delay;.\Code\Basic\init;.\Code\Basic\uart;.\Code\Sensor\DS18B20;.\Code\Sensor\LCD160
-                    -2;.\Code\AlibabaCloud) DEBUG PRINT(.\Listings\CloudCodeArray.lst) OBJECT(.\Objects\CloudCodeArray.obj)
+                    -2;.\Code\AlibabaCloud;.\Code\Sensor\GY_25) DEBUG PRINT(.\Listings\CloudCodeArray.lst) OBJECT(.\Objects\CloudCodeArray.ob
+                    -j)
 
 line level    source
 
@@ -31,39 +32,43 @@ line level    source
   20          code uchar Event_1_Len = 19;
   21          code uchar Event_2_Len = 20;
   22          //########Publish服务名称########//
-  23          code uchar Service_1[] = "LCD1602Display"; //事件1,PubCode=200
+  23          code uchar Service_1[] = "LCD1602Display"; //服务1,PubCode=200,SubCode=2
   24          code uchar Service_1_Len = 14;
-  25          //------------------------------------------------------------------------------------------------//
-  26          //AT命令集
-  27          code uchar ATCmd0[] = "MQTTAUTH";
-  28          code uchar ATCmd1[] = "MQTTSOCK";
-  29          code uchar ATCmd2[] = "MQTTCID";
-  30          code uchar ATCmd3[] = "MQTTKEEPALIVE";
-  31          code uchar ATCmd4[] = "MQTTRECONN";
-  32          code uchar ATCmd5[] = "MQTTAUTOSTART";
-  33          code uchar ATCmd6[] = "MQTTSTART";
-  34          code uchar ATCmd7[] = "MQTTSUB";
-  35          code uchar ATCmd8[] = "MQTTPUB";
-  36          code uchar ATCmd9[] = "MQTTSEND";
-  37          code uchar ATCmd10[] = "MQTTUNSUB";
-  38          code uchar ATCmd11[] = "MQTTSTATUS";
-  39          code uchar ATCmd12[] = "MQTTCLOSE";
-  40          code uchar ATCmd13[] = "WJAP";
-  41          code uchar ATCmd14[] = "REBOOT";
-  42          code uchar ATCmd15[] = "WJAPQ";
-  43          code uchar *ATCmd[] = {ATCmd0, ATCmd1, ATCmd2, ATCmd3, ATCmd4, ATCmd5, ATCmd6, ATCmd7, ATCmd8, ATCmd9,
-  44                                 ATCmd10, ATCmd11, ATCmd12, ATCmd13, ATCmd14,ATCmd15};
-  45          //------------------------------------------------------------------------------------------------//
+  25          code uchar Service_2[] = "GY25Correction"; //服务2,PubCode=201,SubCode=3
+  26          code uchar Service_2_Len = 14;
+  27          code uchar Service_3[] = "MCUControl"; //服务3,PubCode=202,SubCode=4
+  28          code uchar Service_3_Len = 10;
+  29          //------------------------------------------------------------------------------------------------//
+  30          //AT命令集
+  31          code uchar ATCmd0[] = "MQTTAUTH";
+  32          code uchar ATCmd1[] = "MQTTSOCK";
+  33          code uchar ATCmd2[] = "MQTTCID";
+  34          code uchar ATCmd3[] = "MQTTKEEPALIVE";
+  35          code uchar ATCmd4[] = "MQTTRECONN";
+  36          code uchar ATCmd5[] = "MQTTAUTOSTART";
+  37          code uchar ATCmd6[] = "MQTTSTART";
+  38          code uchar ATCmd7[] = "MQTTSUB";
+  39          code uchar ATCmd8[] = "MQTTPUB";
+  40          code uchar ATCmd9[] = "MQTTSEND";
+  41          code uchar ATCmd10[] = "MQTTUNSUB";
+  42          code uchar ATCmd11[] = "MQTTSTATUS";
+  43          code uchar ATCmd12[] = "MQTTCLOSE";
+  44          code uchar ATCmd13[] = "WJAP";
+  45          code uchar ATCmd14[] = "REBOOT";
+  46          code uchar ATCmd15[] = "WJAPQ";
+  47          code uchar *ATCmd[] = {ATCmd0, ATCmd1, ATCmd2, ATCmd3, ATCmd4, ATCmd5, ATCmd6, ATCmd7, ATCmd8, ATCmd9,
+  48                                 ATCmd10, ATCmd11, ATCmd12, ATCmd13, ATCmd14,ATCmd15};
+  49          //------------------------------------------------------------------------------------------------//
 
 
 MODULE INFORMATION:   STATIC OVERLAYABLE
+C51 COMPILER V9.59.0.0   CLOUDCODEARRAY                                                    05/06/2020 16:02:26 PAGE 2   
+
    CODE SIZE        =   ----    ----
-   CONSTANT SIZE    =    480    ----
+   CONSTANT SIZE    =    508    ----
    XDATA SIZE       =   ----    ----
    PDATA SIZE       =   ----    ----
    DATA SIZE        =   ----    ----
-C51 COMPILER V9.59.0.0   CLOUDCODEARRAY                                                    04/17/2020 16:44:00 PAGE 2   
-
    IDATA SIZE       =   ----    ----
    BIT SIZE         =   ----    ----
    EDATA SIZE       =   ----    ----

@@ -12,13 +12,8 @@ void DS18B20STInit(void) //初始化DS18B20内存&读取当前DS18B20分辨率
 {
     uchar Temp, TH, TL;
     memset(&DS18B20ST, 0, sizeof(DS18B20ActST)); //初始化后的缓存温度值应为DS18B20MinT
-    if (DS18B20Init() == EXIT_FAILURE)           //DS18B20初始化失败
-    {
-#if LOGRANK_UART1 >= 1
-        printf("ERR:DS18B20Init fail when DS18B20STInit!\r\n");
-#endif
-        return; //放弃读取DS18B20分辨率.并日志记录ERR信息
-    }
+    while (DS18B20Init() == EXIT_FAILURE)        //DS18B20初始化
+		continue;
     DS18B20WriteByte(DS18B20SkipROM);                   //写入跳过ROM操作
     DS18B20WriteByte(DS18B20ReadRAM);                   //写入读取RAM指令
     Temp = DS18B20ReadByte(), Temp = DS18B20ReadByte(); //跳过温度,此时不能趁机读取温度,是无效值
@@ -29,7 +24,11 @@ void DS18B20STInit(void) //初始化DS18B20内存&读取当前DS18B20分辨率
     DS18B20ST.TemperatureHighData2 = DS18B20ST.TemperatureHighData1 - TemperatureT;
     DS18B20ST.TemperatureLowData1 = TemperatureL; //确定当前Mode下低温报警阈值
     DS18B20ST.TemperatureLowData2 = DS18B20ST.TemperatureLowData1 + TemperatureT;
-    DS18B20ConvertTemperature();      //初始化-开始转换温度#忽略返回值
+    while(DS18B20ConvertTemperature()==EXIT_FAILURE)
+		continue;      //初始化-开始转换温度
+#if LOGRANK_UART1 >= 2
+    printf("LOG#:DS18B20Init ConvertT ok\r\n");
+#endif
     switch (DS18B20ST.ResolutionMode) //对应Mode延时
     {
     case 0:
@@ -45,7 +44,8 @@ void DS18B20STInit(void) //初始化DS18B20内存&读取当前DS18B20分辨率
         delay_ms(765);
         break;
     }
-    DS18B20GetTemperature(); //初始化-读取温度值#忽略返回值
+    while(DS18B20GetTemperature()==EXIT_FAILURE)
+		continue; //初始化-读取温度值
 #if LOGRANK_UART1 >= 2
     printf("LOG#:DS18B20Init ok\r\n");
 #endif
@@ -102,6 +102,7 @@ bool DS18B20GetTemperature(void) //读取温度值
     {
         DS18B20ST.TemperatureData = T; //更新温度数据
         CloudAct.NeedReport = true;    //与历史温度值不同,立即挂起设备上报任务
+		CloudAct.NeedReportT.DS18B20 = true;
         if (DS18B20ST.TemperatureLow == false && T <= (DS18B20ST.TemperatureLowData1))
             DS18B20ST.TemperatureLow = true, CloudAct.NeedReport_Event_1 = true; //低温报警
         if (DS18B20ST.TemperatureLow == true && T >= (DS18B20ST.TemperatureLowData2))

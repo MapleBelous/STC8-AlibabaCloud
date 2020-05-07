@@ -1,0 +1,111 @@
+C51 COMPILER V9.59.0.0   GY_25                                                             05/06/2020 16:02:26 PAGE 1   
+
+
+C51 COMPILER V9.59.0.0, COMPILATION OF MODULE GY_25
+OBJECT MODULE PLACED IN .\Objects\GY_25.obj
+COMPILER INVOKED BY: C:\Keil_v5\C51\BIN\C51.EXE Code\Sensor\GY_25\GY_25.c OMF2 OPTIMIZE(9,SPEED) BROWSE MODP2 INCDIR(.\C
+                    -ode\Basic\def;.\Code\Basic\delay;.\Code\Basic\init;.\Code\Basic\uart;.\Code\Sensor\DS18B20;.\Code\Sensor\LCD1602;.\Code\
+                    -AlibabaCloud;.\Code\Sensor\GY_25) DEBUG PRINT(.\Listings\GY_25.lst) OBJECT(.\Objects\GY_25.obj)
+
+line level    source
+
+   1          #include "GY_25.h"
+   2          //------------------------------------------------------------------------------------------------//
+   3          xdata GY_25ActST GY_25ST;
+   4          //------------------------------------------------------------------------------------------------//
+   5          void GY_25Init(void)//初始化GY_25
+   6          {
+   7   1              memset(&GY_25ST,0xFF,sizeof(GY_25ActST));
+   8   1              S4CON &= ~S4REN;//禁止串口读入
+   9   1              IE2 |= ES4;//开启串口中断
+  10   1              GY_25SetCmd(GY_25Correction2);//校正航向角
+  11   1              GY_25SetCmd(GY_25Correction1);//校正俯仰角&横滚角
+  12   1              GY_25SetCmd(GY_25Query);
+  13   1              S4CON |= S4REN;//开启串口读入
+  14   1              while(GY_25GetAzimuth()!=EXIT_SUCCESS)//读取方位角数据
+  15   1                      continue;
+  16   1      #if LOGRANK_UART1 >= 2
+                  printf("LOG#:GY_25Init ok\r\n");
+              #endif
+  19   1      }
+  20          bool GY_25SetCmd(uchar Cmd)//向GY_25发送命令
+  21          {
+  22   1              uart4_send8(GY_25Head);
+  23   1              uart4_send8(Cmd);
+  24   1              return EXIT_SUCCESS;
+  25   1      }
+  26          bool GY_25GetAzimuth(void)//读取缓冲区内的方位角数据,适用于二进制输出
+  27          {
+  28   1              static pdata uchar State = 0;
+  29   1              static xdata ushort HeadAngle,PitchAngle,RollAngle;
+  30   1              data uchar idx1 = uart4Idx1, idx2 = uart4Idx2;
+  31   1              while(idx1!=idx2)
+  32   1              {
+  33   2                      switch(State)
+  34   2                      {
+  35   3                      case 0:
+  36   3                              if(uart4Buffer[idx1]==0xAA)
+  37   3                                      ++State;
+  38   3                              break;
+  39   3                      case 1:case 2:
+  40   3                              HeadAngle<<=8;
+  41   3                              HeadAngle|=uart4Buffer[idx1];
+  42   3                              ++State;
+  43   3                              break;
+  44   3                      case 3:case 4:
+  45   3                              PitchAngle<<=8;
+  46   3                              PitchAngle|=uart4Buffer[idx1];
+  47   3                              ++State;
+  48   3                              break;
+  49   3                      case 5:case 6:
+  50   3                              RollAngle<<=8;
+  51   3                              RollAngle|=uart4Buffer[idx1];
+  52   3                              ++State;
+  53   3                              break;
+C51 COMPILER V9.59.0.0   GY_25                                                             05/06/2020 16:02:26 PAGE 2   
+
+  54   3                      case 7:
+  55   3                              if(uart4Buffer[idx1]==0x55)
+  56   3                                      ++State;
+  57   3                              break;
+  58   3                      }
+  59   2                      if (idx1 + 1 == uart4_buffer_size)
+  60   2                  idx1 = 0;
+  61   2              else
+  62   2                  ++idx1;
+  63   2              uart4Idx1 = idx1;
+  64   2                      if(State==8)
+  65   2                      {
+  66   3                              bool isp=false;
+  67   3                              State = 0;
+  68   3                              if(HeadAngle!=GY_25ST.HeadAngle)
+  69   3                                      GY_25ST.HeadAngle=HeadAngle,isp=true;
+  70   3                              if(PitchAngle!=GY_25ST.PitchAngle)
+  71   3                                      GY_25ST.PitchAngle=PitchAngle,isp=true;
+  72   3                              if(RollAngle!=GY_25ST.RollAngle)
+  73   3                                      GY_25ST.RollAngle=RollAngle,isp=true;
+  74   3                              if(isp)
+  75   3                                      CloudAct.NeedReport = true,CloudAct.NeedReportT.GY_25 = true;//标记需要上报方位角参数
+  76   3                              return EXIT_SUCCESS;
+  77   3                      }
+  78   2              }
+  79   1              return EXIT_FAILURE;
+  80   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    345    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =     12    ----
+   PDATA SIZE       =      1    ----
+   DATA SIZE        =   ----       1
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----       1
+   EDATA SIZE       =   ----    ----
+   HDATA SIZE       =   ----    ----
+   XDATA CONST SIZE =   ----    ----
+   FAR CONST SIZE   =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

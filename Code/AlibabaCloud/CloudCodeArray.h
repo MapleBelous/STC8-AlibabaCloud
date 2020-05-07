@@ -49,14 +49,18 @@ extern code uchar MQTTAutoStart[];
 #define PublishSet1 "/sys/%s/%s/thing/event/property/post,0" //设置为设备属性上报,PubCode=0
 #define PublishSet2 "/sys/%s/%s/thing/event/%s/post,0"       //设置为设备事件上报,PubCode=1~199
 #define PublishSet3 "/sys/%s/%s/thing/service/%s_reply,0"    //设置为响应服务调用,PubCode=200~255
-//--------------------------------------------------//
+//-************************************************-//
 extern code uchar Event_1[]; //事件1,PubCode=1
 extern code uchar Event_2[]; //事件2,PubCode=2
 extern code uchar Event_1_Len;
 extern code uchar Event_2_Len;
-//--------------------------------------------------//
+//-************************************************-//
 extern code uchar Service_1[]; //服务1,PubCode=200,SubCode=2
 extern code uchar Service_1_Len;
+extern code uchar Service_2[]; //服务2,PubCode=201,SubCode=3
+extern code uchar Service_2_Len;
+extern code uchar Service_3[]; //服务3,PubCode=202,SubCode=4
+extern code uchar Service_3_Len;
 //------------------------------------------------------------------------------------------------//
 //Send参数
 //设备上报属性
