@@ -30,6 +30,7 @@ void Init(void)
 	CloudInit();
     DS18B20STInit(); //初始化DS18B20内存&读取当前DS18B20分辨率
 	GY_25Init();	//初始化GY_25
+	LEDInit();		//初始化LED
 	LCD1602Init();    ////初始化LCD1602
 #if LOGRANK_UART1 >= 2
     printf("LOG#:External Init Finish\r\n");

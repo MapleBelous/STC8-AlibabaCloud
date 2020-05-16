@@ -274,6 +274,27 @@ void CloudInit(void) //初始化Cloud
     printf("LOG#:CloudInit-MQTT_Start ok\r\n"); //日志记录MQTT开启成功
 #endif
 //------------------------------------------------//
+    CloudAct.Cmd = AT_MQTTSUB; //设置MQTT订阅-属性设置,SubCode=1
+    CloudAct.SubCode = 1;
+    CloudSend(0);
+    while (CloudAct.NeedAns == true)
+    {
+        CloudReceive();
+		CloudReSend(22);//2,200ms等待
+		if(CloudAct.NeedAns_FailCount==1)//CloudReSend放弃发送
+		{
+			CloudAct.DisConectWiFi=true;//初始化失败,放弃连接WiFi模组,转为本地工作模式
+#if LOGRANK_UART1 >= 2
+    printf("LOG#:CloudInit ##[Fail]##\r\n"); //日志记录Cloud初始化失败
+#endif
+			return;
+		}
+    }
+	CloudAct.SubisBusy|=0x02;       //1号Sub通道已占用
+#if LOGRANK_UART1 >= 2
+    printf("LOG#:CloudInit-MQTT_SUB_Set ok\r\n"); //日志记录MQTT订阅属性设置成功
+#endif
+//------------------------------------------------//
     CloudAct.Cmd = AT_MQTTSUB; //设置MQTT订阅-服务1,SubCode=2
     CloudAct.SubCode = 2;
     CloudSend(0);
@@ -424,18 +445,26 @@ static bool CloudSend(uchar op) //发送命令到串口
             break;
         case AT_MQTTSUB:
 		{
-			pdata uchar *P;
-			switch(CloudAct.SubCode)
+			if(CloudAct.SubCode == 0)
+				;
+			else if(CloudAct.SubCode == 1)
+				sprintf(CloudSendBuffer + CloudSendIdx, "=" SubscribeSet2 "\r",
+					CloudAct.SubCode,ProductKey, DeviceName);
+			else
 			{
-			case 2://订阅云端调用设备服务1
-				P=Service_1;break;
-			case 3://订阅云端调用设备服务2
-				P=Service_2;break;
-			case 4://订阅云端调用设备服务3
-				P=Service_3;break;
+				pdata uchar *P;
+				switch(CloudAct.SubCode)
+				{
+				case 2://订阅云端调用设备服务1
+					P=Service_1;break;
+				case 3://订阅云端调用设备服务2
+					P=Service_2;break;
+				case 4://订阅云端调用设备服务3
+					P=Service_3;break;
+				}
+				sprintf(CloudSendBuffer + CloudSendIdx, "=" SubscribeSet4 "\r",
+					CloudAct.SubCode,ProductKey, DeviceName,P);
 			}
-			sprintf(CloudSendBuffer + CloudSendIdx, "=" SubscribeSet4 "\r",
-				CloudAct.SubCode,ProductKey, DeviceName,P);
 		}
             break;
         case AT_MQTTPUB:
@@ -584,15 +613,39 @@ static bool CloudReport(uchar Code) //设备上报
             return EXIT_FAILURE;
         }
 		CloudSendDataIdx = 0;
-		if(CloudAct.NeedReportT.GY_25)
+		if(CloudAct.NeedReportT.GY_25 == true)
 			CloudSendDataIdx += sprintf(CloudSendData, "\"HeadAngle\":%.2f,\"PitchAngle\":%.2f,\"RollAngle\":%.2f",
 			GY_25ST.HeadAngle/100.0,GY_25ST.PitchAngle/100.0,GY_25ST.RollAngle/100.0);
-		if(CloudAct.NeedReportT.DS18B20)
+		if(CloudAct.NeedReportT.DS18B20 == true)
 		{
 			if(CloudSendDataIdx)
 				CloudSendData[CloudSendDataIdx++]=',';
-			CloudSendDataIdx += sprintf(CloudSendData, "\"WaterTemperature\":%.3f",
+			CloudSendDataIdx += sprintf(CloudSendData+CloudSendDataIdx, "\"WaterTemperature\":%.3f",
                                    (DS18B20ST.TemperatureData) * DS18B20ReTransfrom[DS18B20ST.ResolutionMode] + (float)DS18B20MinT);
+		}
+		if(CloudAct.NeedReportT.LED1 == true)
+		{
+			if(CloudSendDataIdx)
+				CloudSendData[CloudSendDataIdx++]=',';
+			CloudSendDataIdx += sprintf(CloudSendData+CloudSendDataIdx, "\"LED1\":%bu",LEDRead(1));
+		}
+		if(CloudAct.NeedReportT.LED2 == true)
+		{
+			if(CloudSendDataIdx)
+				CloudSendData[CloudSendDataIdx++]=',';
+			CloudSendDataIdx += sprintf(CloudSendData+CloudSendDataIdx, "\"LED2\":%bu",LEDRead(2));
+		}
+		if(CloudAct.NeedReportT.LED3 == true)
+		{
+			if(CloudSendDataIdx)
+				CloudSendData[CloudSendDataIdx++]=',';
+			CloudSendDataIdx += sprintf(CloudSendData+CloudSendDataIdx, "\"LED3\":%bu",LEDRead(3));
+		}
+		if(CloudAct.NeedReportT.IsStorageLED == true)
+		{
+			if(CloudSendDataIdx)
+				CloudSendData[CloudSendDataIdx++]=',';
+			CloudSendDataIdx += sprintf(CloudSendData+CloudSendDataIdx, "\"IsStorageLED\":%bu",LEDRead(4));
 		}
 	}
     else
@@ -663,6 +716,22 @@ static void CloudHandleReceive(void)
             case '0': //云端响应属性上报,云端响应事件上报-常闭通道
                 break;
             case '1': //云端设置设备属性
+				P=strstr(P,"\"params\":{\""),P+=11;
+			{
+				pdata uchar name[16],i=0;
+				while(*P != '"'&&i!=15)
+					name[i++]=*P++;
+				name[i]=0;
+				P+=2;
+				if(strncmp(name,"LED1",4) == 0)
+					LEDWrite(1,(*P=='1')?LEDOpen:LEDClose);
+				else if(strncmp(name,"LED2",4) == 0)
+					LEDWrite(2,(*P=='1')?LEDOpen:LEDClose);
+				else if(strncmp(name,"LED3",4) == 0)
+					LEDWrite(3,(*P=='1')?LEDOpen:LEDClose);
+				else if(strncmp(name,"IsStorageLED",12) == 0)
+					LEDWrite(4,*P=='1');
+			}
                 break;
             case '2': //云端调用设备服务:1,Service_1:LCD1602Display
 			{
@@ -742,7 +811,7 @@ static void CloudHandleReceive(void)
                 if (strncmp(CloudReceiveBuffer + 19, "SUCCESS", 7) == 0)
                     CloudAct.NeedAns = false; //成功连接
             if (CloudAct.Cmd == AT_MQTTSUB && (strncmp(CloudReceiveBuffer + 13, "SUBSCRIBE", 9) == 0))
-                if (strncmp(CloudReceiveBuffer + 23, "SUCCESS", 7) == 0)
+                if (strncmp(CloudReceiveBuffer + 23, "SUCCESS", 7) == 0 && *(CloudReceiveBuffer+11)-'0' == CloudAct.SubCode)
                     CloudAct.NeedAns = false; //成功设置订阅
             if (CloudAct.Cmd == AT_MQTTSEND && (strncmp(CloudReceiveBuffer + 11, "PUBLISH", 7) == 0))
                 if (strncmp(CloudReceiveBuffer + 19, "SUCCESS", 7) == 0)

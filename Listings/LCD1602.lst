@@ -1,11 +1,12 @@
-C51 COMPILER V9.59.0.0   LCD1602                                                           05/06/2020 16:02:26 PAGE 1   
+C51 COMPILER V9.59.0.0   LCD1602                                                           05/07/2020 19:08:07 PAGE 1   
 
 
 C51 COMPILER V9.59.0.0, COMPILATION OF MODULE LCD1602
 OBJECT MODULE PLACED IN .\Objects\LCD1602.obj
-COMPILER INVOKED BY: C:\Keil_v5\C51\BIN\C51.EXE Code\Sensor\LCD1602\LCD1602.c OMF2 OPTIMIZE(9,SPEED) BROWSE MODP2 INCDIR
-                    -(.\Code\Basic\def;.\Code\Basic\delay;.\Code\Basic\init;.\Code\Basic\uart;.\Code\Sensor\DS18B20;.\Code\Sensor\LCD1602;.\C
-                    -ode\AlibabaCloud;.\Code\Sensor\GY_25) DEBUG PRINT(.\Listings\LCD1602.lst) OBJECT(.\Objects\LCD1602.obj)
+COMPILER INVOKED BY: C:\Keil_v5\C51\BIN\C51.EXE Code\SubDev\LCD1602\LCD1602.c OBJECTADVANCED OPTIMIZE(9,SPEED) BROWSE MO
+                    -DP2 INCDIR(.\Code\Basic\def;.\Code\Basic\delay;.\Code\Basic\init;.\Code\Basic\uart;.\Code\Basic\EEPROM;.\Code\AlibabaClo
+                    -ud;.\Code\SubDev\DS18B20;.\Code\SubDev\GY_25;.\Code\SubDev\LCD1602;.\Code\SubDev\LED) DEBUG PRINT(.\Listings\LCD1602.lst
+                    -) OBJECT(.\Objects\LCD1602.obj)
 
 line level    source
 
@@ -61,9 +62,9 @@ line level    source
   50   1          LCD1602_RW = 1;
   51   1          LCD1602_EN = 1;
   52   1              LCD1602_DATA=0xFF;
-  53   1              delay_us(40);//等待中
-C51 COMPILER V9.59.0.0   LCD1602                                                           05/06/2020 16:02:26 PAGE 2   
+C51 COMPILER V9.59.0.0   LCD1602                                                           05/07/2020 19:08:07 PAGE 2   
 
+  53   1              delay_us(40);//等待中
   54   1              Data=LCD1602_DATA;
   55   1              LCD1602_EN = 0;
   56   1          return Data;
@@ -115,7 +116,7 @@ line level    source
 
 
 MODULE INFORMATION:   STATIC OVERLAYABLE
-   CODE SIZE        =    267    ----
+   CODE SIZE        =    285    ----
    CONSTANT SIZE    =     16    ----
    XDATA SIZE       =   ----    ----
    PDATA SIZE       =   ----    ----
@@ -125,9 +126,9 @@ MODULE INFORMATION:   STATIC OVERLAYABLE
    EDATA SIZE       =   ----    ----
    HDATA SIZE       =   ----    ----
    XDATA CONST SIZE =   ----    ----
-   FAR CONST SIZE   =   ----    ----
-C51 COMPILER V9.59.0.0   LCD1602                                                           05/06/2020 16:02:26 PAGE 3   
+C51 COMPILER V9.59.0.0   LCD1602                                                           05/07/2020 19:08:07 PAGE 3   
 
+   FAR CONST SIZE   =   ----    ----
 END OF MODULE INFORMATION.
 
 

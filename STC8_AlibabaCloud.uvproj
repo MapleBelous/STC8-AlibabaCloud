@@ -318,13 +318,13 @@
             <WarningLevel>2</WarningLevel>
             <SizeSpeed>1</SizeSpeed>
             <ObjectExtend>1</ObjectExtend>
-            <ACallAJmp>0</ACallAJmp>
+            <ACallAJmp>1</ACallAJmp>
             <InterruptVectorAddress>0</InterruptVectorAddress>
             <VariousControls>
               <MiscControls></MiscControls>
               <Define></Define>
               <Undefine></Undefine>
-              <IncludePath>.\Code\Basic\def;.\Code\Basic\delay;.\Code\Basic\init;.\Code\Basic\uart;.\Code\Sensor\DS18B20;.\Code\Sensor\LCD1602;.\Code\AlibabaCloud;.\Code\Sensor\GY_25</IncludePath>
+              <IncludePath>.\Code\Basic\def;.\Code\Basic\delay;.\Code\Basic\init;.\Code\Basic\uart;.\Code\Basic\EEPROM;.\Code\AlibabaCloud;.\Code\SubDev\DS18B20;.\Code\SubDev\GY_25;.\Code\SubDev\LCD1602;.\Code\SubDev\LED</IncludePath>
             </VariousControls>
           </C51>
           <Ax51>
@@ -406,25 +406,35 @@
               <FileType>1</FileType>
               <FilePath>.\Code\Basic\delay\delay.c</FilePath>
             </File>
+            <File>
+              <FileName>EEPROM.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Code\Basic\EEPROM\EEPROM.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
-          <GroupName>Sensor</GroupName>
+          <GroupName>Subdev</GroupName>
           <Files>
             <File>
               <FileName>DS18B20.c</FileName>
               <FileType>1</FileType>
-              <FilePath>.\Code\Sensor\DS18B20\DS18B20.c</FilePath>
-            </File>
-            <File>
-              <FileName>LCD1602.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>.\Code\Sensor\LCD1602\LCD1602.c</FilePath>
+              <FilePath>.\Code\SubDev\DS18B20\DS18B20.c</FilePath>
             </File>
             <File>
               <FileName>GY_25.c</FileName>
               <FileType>1</FileType>
-              <FilePath>.\Code\Sensor\GY_25\GY_25.c</FilePath>
+              <FilePath>.\Code\SubDev\GY_25\GY_25.c</FilePath>
+            </File>
+            <File>
+              <FileName>LCD1602.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Code\SubDev\LCD1602\LCD1602.c</FilePath>
+            </File>
+            <File>
+              <FileName>LED.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Code\SubDev\LED\LED.c</FilePath>
             </File>
           </Files>
         </Group>

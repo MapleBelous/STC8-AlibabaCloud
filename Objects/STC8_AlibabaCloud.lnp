@@ -3,9 +3,11 @@
 ".\Objects\uart.obj",
 ".\Objects\Init.obj",
 ".\Objects\delay.obj",
+".\Objects\EEPROM.obj",
 ".\Objects\DS18B20.obj",
-".\Objects\LCD1602.obj",
 ".\Objects\GY_25.obj",
+".\Objects\LCD1602.obj",
+".\Objects\LED.obj",
 ".\Objects\CloudHandle.obj",
 ".\Objects\CloudCodeArray.obj" 
 TO ".\Objects\STC8_AlibabaCloud" 

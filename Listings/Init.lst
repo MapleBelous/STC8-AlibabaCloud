@@ -1,11 +1,12 @@
-C51 COMPILER V9.59.0.0   INIT                                                              05/06/2020 16:02:25 PAGE 1   
+C51 COMPILER V9.59.0.0   INIT                                                              05/08/2020 12:19:53 PAGE 1   
 
 
 C51 COMPILER V9.59.0.0, COMPILATION OF MODULE INIT
 OBJECT MODULE PLACED IN .\Objects\Init.obj
-COMPILER INVOKED BY: C:\Keil_v5\C51\BIN\C51.EXE Code\Basic\init\Init.c OMF2 OPTIMIZE(9,SPEED) BROWSE MODP2 INCDIR(.\Code
-                    -\Basic\def;.\Code\Basic\delay;.\Code\Basic\init;.\Code\Basic\uart;.\Code\Sensor\DS18B20;.\Code\Sensor\LCD1602;.\Code\Ali
-                    -babaCloud;.\Code\Sensor\GY_25) DEBUG PRINT(.\Listings\Init.lst) OBJECT(.\Objects\Init.obj)
+COMPILER INVOKED BY: C:\Keil_v5\C51\BIN\C51.EXE Code\Basic\init\Init.c OBJECTADVANCED OPTIMIZE(9,SPEED) BROWSE MODP2 INC
+                    -DIR(.\Code\Basic\def;.\Code\Basic\delay;.\Code\Basic\init;.\Code\Basic\uart;.\Code\Basic\EEPROM;.\Code\AlibabaCloud;.\Co
+                    -de\SubDev\DS18B20;.\Code\SubDev\GY_25;.\Code\SubDev\LCD1602;.\Code\SubDev\LED) DEBUG PRINT(.\Listings\Init.lst) OBJECT(.
+                    -\Objects\Init.obj)
 
 line level    source
 
@@ -41,44 +42,45 @@ line level    source
   30   1              CloudInit();
   31   1          DS18B20STInit(); //初始化DS18B20内存&读取当前DS18B20分辨率
   32   1              GY_25Init();    //初始化GY_25
-  33   1              LCD1602Init();    ////初始化LCD1602
-  34   1      #if LOGRANK_UART1 >= 2
+  33   1              LEDInit();              //初始化LED
+  34   1              LCD1602Init();    ////初始化LCD1602
+  35   1      #if LOGRANK_UART1 >= 2
                   printf("LOG#:External Init Finish\r\n");
               #endif
-  37   1      }
-  38          void Init_rst(void)
-  39          {
-  40   1          //看门狗寄存器 // WDT_FLAG - EN_WDT CLR_WDT IDL_WDT WDT_PS[2:0]
-  41   1          WDT_CONTR = WDT_CONTR & ~EN_WDT;//开关看门狗
-  42   1              //WDT_CONTR |= 0x07;//看门狗分频系数最大
-  43   1          //低压复位/RST引脚 配置寄存器 // - ENLVR - P54RST - - LVDS[1:0]
-  44   1          RSTCFG = RSTCFG & ~0x40 & ~0x10;
-  45   1          RSTCFG &= 0xFC; //LVDS[1:0] 低压检测门槛电压:00 2.2V/01 2.4V/10 2.7V/11 3.0V
-  46   1      }
-  47          void Init_io(void)
-  48          {
-  49   1              //串口1
-  50   1          P3M1 &= ~0x01, P3M0 &= ~0x01; //P3.0为准双向口
-  51   1          P3M1 &= ~0x02, P3M0 |= 0x02; //P3.1为推挽输出
-  52   1              //串口2
-  53   1          P1M1 &= ~0x01, P1M0 &= ~0x01; //P1.0为准双向口
-C51 COMPILER V9.59.0.0   INIT                                                              05/06/2020 16:02:25 PAGE 2   
+  38   1      }
+  39          void Init_rst(void)
+  40          {
+  41   1          //看门狗寄存器 // WDT_FLAG - EN_WDT CLR_WDT IDL_WDT WDT_PS[2:0]
+  42   1          WDT_CONTR = WDT_CONTR & ~EN_WDT;//开关看门狗
+  43   1              //WDT_CONTR |= 0x07;//看门狗分频系数最大
+  44   1          //低压复位/RST引脚 配置寄存器 // - ENLVR - P54RST - - LVDS[1:0]
+  45   1          RSTCFG = RSTCFG & ~0x40 & ~0x10;
+  46   1          RSTCFG &= 0xFC; //LVDS[1:0] 低压检测门槛电压:00 2.2V/01 2.4V/10 2.7V/11 3.0V
+  47   1      }
+  48          void Init_io(void)
+  49          {
+  50   1              //串口1
+  51   1          P3M1 &= ~0x01, P3M0 &= ~0x01; //P3.0为准双向口
+  52   1          P3M1 &= ~0x02, P3M0 |= 0x02; //P3.1为推挽输出
+C51 COMPILER V9.59.0.0   INIT                                                              05/08/2020 12:19:53 PAGE 2   
 
-  54   1          P1M1 &= ~0x02, P1M0 |= 0x02; //P1.1为推挽输出
-  55   1              //串口4
-  56   1          P0M1 &= ~0x04, P0M0 &= ~0x04; //P0.2为准双向口
-  57   1          P0M1 &= ~0x08, P0M0 |= 0x08; //P0.3为推挽输出
-  58   1      }
-  59          void Init_timer0(void)//1ms
-  60          {
-  61   1              AUXR |= 0x80;           //定时器时钟1T模式
-  62   1              TMOD &= 0xF0;           //设置定时器模式
-  63   1              TL0 = 0x9A;             //设置定时初值
-  64   1              TH0 = 0xA9;             //设置定时初值
-  65   1              TF0 = 0;                //清除TF0标志
-  66   1              TR0 = 1;                //定时器0开始计时
-  67   1      }
-  68          #if LOGRANK_UART1 >= 1
+  53   1              //串口2
+  54   1          P1M1 &= ~0x01, P1M0 &= ~0x01; //P1.0为准双向口
+  55   1          P1M1 &= ~0x02, P1M0 |= 0x02; //P1.1为推挽输出
+  56   1              //串口4
+  57   1          P0M1 &= ~0x04, P0M0 &= ~0x04; //P0.2为准双向口
+  58   1          P0M1 &= ~0x08, P0M0 |= 0x08; //P0.3为推挽输出
+  59   1      }
+  60          void Init_timer0(void)//1ms
+  61          {
+  62   1              AUXR |= 0x80;           //定时器时钟1T模式
+  63   1              TMOD &= 0xF0;           //设置定时器模式
+  64   1              TL0 = 0x9A;             //设置定时初值
+  65   1              TH0 = 0xA9;             //设置定时初值
+  66   1              TF0 = 0;                //清除TF0标志
+  67   1              TR0 = 1;                //定时器0开始计时
+  68   1      }
+  69          #if LOGRANK_UART1 >= 1
               void Init_uart1(void)
               {
                       //与串口2共用定时器2
@@ -90,67 +92,67 @@ line level    source
                   uart1Busy = false;
               }
               #endif
-  79          void Init_uart2(void)
-  80          {
-  81   1              //定时器2
-  82   1              ulong BTL = UART_16(115200, 1);
-  83   1              AUXR |= T2x12;//T2速度x12
-  84   1              T2L = BTL & 0xFF;
-  85   1          T2H = BTL >> 8;
-  86   1              
-  87   1          S2CON = 0x10;   // [~S4SM0] [/] S4SM2 [S4REN] S4TB8 S4RB8 S4TI S4RI
-  88   1              
-  89   1          uart2Busy = false;
-  90   1          uart2Idx1 = uart2Idx2 = 0;
-  91   1          AUXR |= T2R; //开启定时器2
-  92   1      }
-  93          void Init_uart4(void)
-  94          {
-  95   1              //定时器4
-  96   1              ulong BTL = UART_16(9600,1);
-  97   1              T4T3M |= T4x12;//T4速度x12
-  98   1              T4L = BTL & 0xFF;
-  99   1          T4H = BTL >> 8;
- 100   1              
- 101   1              S4CON = 0x50;
- 102   1              
- 103   1          uart4Busy = false;
- 104   1          uart4Idx1 = uart4Idx2 = 0;
- 105   1              T4T3M |= T4R;//开启定时器4
- 106   1      }
- 107          void Init_wkt(float ms,bool en)//设置掉电唤醒计时器,单位ms.允许0.5ms-min(0),16384ms-max(32767);每次增长0.5
+  80          void Init_uart2(void)
+  81          {
+  82   1              //定时器2
+  83   1              ulong BTL = UART_16(115200, 1);
+  84   1              AUXR |= T2x12;//T2速度x12
+  85   1              T2L = BTL & 0xFF;
+  86   1          T2H = BTL >> 8;
+  87   1              
+  88   1          S2CON = 0x10;   // [~S4SM0] [/] S4SM2 [S4REN] S4TB8 S4RB8 S4TI S4RI
+  89   1              
+  90   1          uart2Busy = false;
+  91   1          uart2Idx1 = uart2Idx2 = 0;
+  92   1          AUXR |= T2R; //开启定时器2
+  93   1      }
+  94          void Init_uart4(void)
+  95          {
+  96   1              //定时器4
+  97   1              ulong BTL = UART_16(9600,1);
+  98   1              T4T3M |= T4x12;//T4速度x12
+  99   1              T4L = BTL & 0xFF;
+ 100   1          T4H = BTL >> 8;
+ 101   1              
+ 102   1              S4CON = 0x50;
+ 103   1              
+ 104   1          uart4Busy = false;
+ 105   1          uart4Idx1 = uart4Idx2 = 0;
+ 106   1              T4T3M |= T4R;//开启定时器4
+ 107   1      }
+ 108          void Init_wkt(float ms,bool en)//设置掉电唤醒计时器,单位ms.允许0.5ms-min(0),16384ms-max(32767);每次增长0.5
              -ms
- 108          {
- 109   1              pdata ushort T;
- 110   1              if(en==false)
- 111   1                      return;
- 112   1              T = ((ms*2.0)-1);
- 113   1              T &= 0x7FFF;
-C51 COMPILER V9.59.0.0   INIT                                                              05/06/2020 16:02:25 PAGE 3   
+ 109          {
+ 110   1              pdata ushort T;
+ 111   1              if(en==false)
+ 112   1                      return;
+C51 COMPILER V9.59.0.0   INIT                                                              05/08/2020 12:19:53 PAGE 3   
 
- 114   1              WKTCL = T&0x00FF;
- 115   1              WKTCH = (T>>8)&0x007F;
- 116   1              WKTCH |= 0x80;//开启掉电唤醒计时器
- 117   1      }
- 118          void Init_interrupt(void)
- 119          {
- 120   1          ET0 = 1;                    //开启定时器0中断
- 121   1          ES = 1;                                     //开启串口1中断
- 122   1          IE2 |= ES2, IE2 &= ~ET2;    //开启串口2中断,关闭定时器2中断
- 123   1          /*IE2 |= ES4, */IE2 &= ~ET4;        //开启串口4中断,关闭定时器4中断
- 124   1              
- 125   1          PT0 = 0, IPH |= PT0H; //定时器0优先级2,系统时间尽可能精确,最高优先级
- 126   1          PS = 0, IPH &= ~PSH;  //串口1优先级0
- 127   1              IP2 |= PS2, IP2H |= PS2H;//串口2优先级3
- 128   1      
- 129   1          EA = 1; //开启总中断开关
- 130   1      }
- 131          
- 132          //------------------------------------------------------------------------------------------------//
+ 113   1              T = ((ms*2.0)-1);
+ 114   1              T &= 0x7FFF;
+ 115   1              WKTCL = T&0x00FF;
+ 116   1              WKTCH = (T>>8)&0x007F;
+ 117   1              WKTCH |= 0x80;//开启掉电唤醒计时器
+ 118   1      }
+ 119          void Init_interrupt(void)
+ 120          {
+ 121   1          ET0 = 1;                    //开启定时器0中断
+ 122   1          ES = 1;                                     //开启串口1中断
+ 123   1          IE2 |= ES2, IE2 &= ~ET2;    //开启串口2中断,关闭定时器2中断
+ 124   1          /*IE2 |= ES4, */IE2 &= ~ET4;        //开启串口4中断,关闭定时器4中断
+ 125   1              
+ 126   1          PT0 = 0, IPH |= PT0H; //定时器0优先级2,系统时间尽可能精确,最高优先级
+ 127   1          PS = 0, IPH &= ~PSH;  //串口1优先级0
+ 128   1              IP2 |= PS2, IP2H |= PS2H;//串口2优先级3
+ 129   1      
+ 130   1          EA = 1; //开启总中断开关
+ 131   1      }
+ 132          
+ 133          //------------------------------------------------------------------------------------------------//
 
 
 MODULE INFORMATION:   STATIC OVERLAYABLE
-   CODE SIZE        =    309    ----
+   CODE SIZE        =    315    ----
    CONSTANT SIZE    =   ----    ----
    XDATA SIZE       =   ----    ----
    PDATA SIZE       =   ----       2

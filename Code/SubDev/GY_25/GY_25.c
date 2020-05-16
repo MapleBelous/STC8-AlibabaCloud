@@ -21,6 +21,7 @@ bool GY_25SetCmd(uchar Cmd)//向GY_25发送命令
 {
 	uart4_send8(GY_25Head);
 	uart4_send8(Cmd);
+	S4CON |= S4REN;//开启串口读入
 	return EXIT_SUCCESS;
 }
 bool GY_25GetAzimuth(void)//读取缓冲区内的方位角数据,适用于二进制输出
@@ -65,6 +66,7 @@ bool GY_25GetAzimuth(void)//读取缓冲区内的方位角数据,适用于二进制输出
 		{
 			bool isp=false;
 			State = 0;
+			S4CON &= ~S4REN;//禁止串口读入
 			if(HeadAngle!=GY_25ST.HeadAngle)
 				GY_25ST.HeadAngle=HeadAngle,isp=true;
 			if(PitchAngle!=GY_25ST.PitchAngle)
@@ -78,3 +80,4 @@ bool GY_25GetAzimuth(void)//读取缓冲区内的方位角数据,适用于二进制输出
 	}
 	return EXIT_FAILURE;
 }
+//------------------------------------------------------------------------------------------------//

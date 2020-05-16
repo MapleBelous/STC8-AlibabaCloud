@@ -1,0 +1,1 @@
+"Code\AlibabaCloud\CloudHandle.c" OBJECTADVANCED OPTIMIZE (9,SPEED) BROWSE MODP2 INCDIR(.\Code\Basic\def;.\Code\Basic\delay;.\Code\Basic\init;.\Code\Basic\uart;.\Code\Basic\EEPROM;.\Code\AlibabaCloud;.\Code\SubDev\DS18B20;.\Code\SubDev\GY_25;.\Code\SubDev\LCD1602;.\Code\SubDev\LED) DEBUG PRINT(.\Listings\CloudHandle.lst) OBJECT(.\Objects\CloudHandle.obj)

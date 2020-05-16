@@ -7,6 +7,7 @@
 #include "DS18B20.h"
 #include "LCD1602.h"
 #include "GY_25.h"
+#include "LED.h"
 //------------------------------------------------------------------------------------------------//
 //Cloud任务#状态指示器
 typedef struct
@@ -35,6 +36,8 @@ typedef struct
 	struct{
 		uchar DS18B20:1;           
 		uchar GY_25:1;
+		uchar LED1:1,LED2:1,LED3:1;
+		uchar IsStorageLED:1;
 	}NeedReportT;					//需要上报的参数类型
     uchar NeedReport_Event_1 : 1;  //需要上报事件:警报WaterTemperatureLow
     uchar NeedReport_Event_2 : 1;  //需要上报事件:警报WaterTemperatureHigh
@@ -57,12 +60,12 @@ extern void CloudLoop(void); //Cloud主循环
 extern void CloudInit(void); //初始化Cloud
 //------------------------------------------------------------------------------------------------//
 //各缓冲区大小
-#define CloudReceiveBufferSize 500
-#define CloudSendBufferSize 500
-#define CloudSendDataSize 100
+#define CloudReceiveBufferSize 600
+#define CloudSendBufferSize 600
+#define CloudSendDataSize 300
 //------------------------------------------------------------------------------------------------//
 //定时任务时间参数
-#define DS18B20NeedReadMs 1000
+#define DS18B20NeedReadMs 500
 #define GY_25NeedReadMs 1000
 //------------------------------------------------------------------------------------------------//
 #endif
